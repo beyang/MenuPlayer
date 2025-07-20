@@ -6,12 +6,22 @@
 //
 
 import SwiftUI
+import AppKit
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+    }
+}
 
 @main
 struct MenuPlayerApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     var body: some Scene {
-        WindowGroup {
+        MenuBarExtra("MenuPlayer", systemImage: "play.fill") {
             ContentView()
         }
+        .menuBarExtraStyle(.window)
     }
 }

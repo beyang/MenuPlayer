@@ -1,0 +1,23 @@
+# Xcode build files
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Archives
+*.xcarchive
+
+# Build products
+*.app
+*.ipa
+
+# Debug symbols
+*.dSYM/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
