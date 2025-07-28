@@ -174,15 +174,11 @@ struct ContentView: View {
                     TextField("Enter URL", text: $urlString)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .onSubmit {
-                            if let url = URL(string: urlString) {
-                                currentURL = url
-                            }
+                            navigateToURL()
                         }
                     
                     Button("Go") {
-                        if let url = URL(string: urlString) {
-                            currentURL = url
-                        }
+                        navigateToURL()
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -225,6 +221,22 @@ struct ContentView: View {
             .background(Color(NSColor.controlBackgroundColor))
         }
         .frame(minWidth: 900, minHeight: 500)
+    }
+    
+    private func navigateToURL() {
+        var processedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Check if URL has a scheme
+        if !processedURL.contains("://") {
+            // Add https:// if no scheme is provided
+            processedURL = "https://" + processedURL
+            // Update the text field to show the complete URL
+            urlString = processedURL
+        }
+        
+        if let url = URL(string: processedURL) {
+            currentURL = url
+        }
     }
 }
 
