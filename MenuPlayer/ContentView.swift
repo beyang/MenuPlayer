@@ -118,6 +118,13 @@ struct ActivityListView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(newActivityText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    
+                    Button("Clear") {
+                        clearAllActivities()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.red)
+                    .disabled(activities.isEmpty)
                 }
             }
             .padding(.horizontal, 12)
@@ -143,6 +150,10 @@ struct ActivityListView: View {
         activities.append(newActivity)
         
         newActivityText = ""
+    }
+    
+    private func clearAllActivities() {
+        activities.removeAll()
     }
 }
 
