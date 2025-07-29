@@ -19,9 +19,18 @@ struct ActivityItem: Identifiable {
             return "ongoing"
         }
         let interval = end.timeIntervalSince(startTime)
-        let minutes = Int(interval / 60)
+        let days = Int(interval / (24 * 60 * 60))
+        let hours = Int((interval.truncatingRemainder(dividingBy: (24 * 60 * 60))) / (60 * 60))
+        let minutes = Int((interval.truncatingRemainder(dividingBy: (60 * 60))) / 60)
         let seconds = Int(interval.truncatingRemainder(dividingBy: 60))
-        return "\(minutes)m \(seconds)s"
+        
+        var components: [String] = []
+        if days > 0 { components.append("\(days)d") }
+        if hours > 0 { components.append("\(hours)h") }
+        if minutes > 0 { components.append("\(minutes)m") }
+        if seconds > 0 || components.isEmpty { components.append("\(seconds)s") }
+        
+        return components.joined(separator: " ")
     }
     
     var timeDisplay: String {
