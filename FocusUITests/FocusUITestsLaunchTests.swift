@@ -1,13 +1,13 @@
 //
-//  MenuPlayerUITestsLaunchTests.swift
-//  MenuPlayerUITests
+//  FocusUITestsLaunchTests.swift
+//  FocusUITests
 //
 //  Created by Beyang Liu on 7/19/25.
 //
 
 import XCTest
 
-final class MenuPlayerUITestsLaunchTests: XCTestCase {
+final class FocusUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

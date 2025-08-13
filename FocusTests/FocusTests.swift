@@ -1,14 +1,14 @@
 //
-//  MenuPlayerTests.swift
-//  MenuPlayerTests
+//  FocusTests.swift
+//  FocusTests
 //
 //  Created by Beyang Liu on 7/19/25.
 //
 
 import Testing
-@testable import MenuPlayer
+@testable import Focus
 
-struct MenuPlayerTests {
+struct FocusTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.

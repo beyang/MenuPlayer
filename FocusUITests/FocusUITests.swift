@@ -1,13 +1,13 @@
 //
-//  MenuPlayerUITests.swift
-//  MenuPlayerUITests
+//  FocusUITests.swift
+//  FocusUITests
 //
 //  Created by Beyang Liu on 7/19/25.
 //
 
 import XCTest
 
-final class MenuPlayerUITests: XCTestCase {
+final class FocusUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

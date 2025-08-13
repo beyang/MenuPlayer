@@ -1,6 +1,6 @@
 //
-//  MenuPlayerApp.swift
-//  MenuPlayer
+//  FocusApp.swift
+//  Focus
 //
 //  Created by Beyang Liu on 7/19/25.
 //
@@ -16,12 +16,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct MenuPlayerApp: App {
+struct FocusApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let persistenceController = PersistenceController.shared
 
     var body: some Scene {
-        MenuBarExtra("MenuPlayer", systemImage: "play.fill") {
+        MenuBarExtra("Focus", systemImage: "play.fill") {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }

@@ -1,6 +1,6 @@
-# MenuPlayer
+# Focus
 
-A macOS menu bar application that provides a web browser interface accessible from the system menu bar. MenuPlayer runs as an accessory app, allowing you to quickly browse websites without opening a full browser window.
+A macOS menu bar application that provides a web browser interface accessible from the system menu bar. Focus runs as an accessory app, allowing you to quickly browse websites without opening a full browser window.
 
 ## Features
 
@@ -19,22 +19,22 @@ A macOS menu bar application that provides a web browser interface accessible fr
 
 ### Debug Build
 ```bash
-xcodebuild -project MenuPlayer.xcodeproj -scheme MenuPlayer -configuration Debug
+xcodebuild -project Focus.xcodeproj -scheme Focus -configuration Debug
 ```
 
 ### Release Distribution
 ```bash
-xcodebuild -project MenuPlayer.xcodeproj -scheme MenuPlayer -configuration Release -derivedDataPath build clean build
+xcodebuild -project Focus.xcodeproj -scheme Focus -configuration Release -derivedDataPath build clean build
 ```
 
 The built application will be located at:
 ```
-build/Build/Products/Release/MenuPlayer.app
+build/Build/Products/Release/Focus.app
 ```
 
 ## Usage
 
-1. Launch MenuPlayer.app
+1. Launch Focus.app
 2. The application will appear in your menu bar as a play button icon
 3. Click the icon to open the web browser interface
 4. Enter a URL in the text field and press Enter or click "Go"
@@ -43,7 +43,7 @@ build/Build/Products/Release/MenuPlayer.app
 
 ## Architecture
 
-- **MenuPlayerApp.swift**: Main app entry point with menu bar configuration
+- **FocusApp.swift**: Main app entry point with menu bar configuration
 - **ContentView.swift**: SwiftUI interface with embedded WebKit view
 - **WebView**: Custom NSViewRepresentable wrapper for WKWebView
 

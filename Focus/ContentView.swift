@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  MenuPlayer
+//  Focus
 //
 //  Created by Beyang Liu on 7/19/25.
 //
@@ -88,7 +88,7 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Header with title and URL bar
             VStack(spacing: 12) {
-                Text("MenuPlayer")
+                Text("Focus")
                     .font(.title2)
                     .fontWeight(.medium)
 
@@ -306,7 +306,7 @@ struct ContentView: View {
         if commandContent.hasPrefix("notif ") {
             let message = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
             if !message.isEmpty {
-                showNotification(title: "MenuPlayer", message: message)
+                showNotification(title: "Focus", message: message)
                 commandInput = ""
             } else {
                 errorMessage = "notif command requires a message"

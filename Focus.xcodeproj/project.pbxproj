@@ -12,37 +12,37 @@
 			containerPortal = 3D0F895D2E2C715D00FCB1C4 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3D0F89642E2C715D00FCB1C4;
-			remoteInfo = MenuPlayer;
+			remoteInfo = Focus;
 		};
 		3D0F897E2E2C715E00FCB1C4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3D0F895D2E2C715D00FCB1C4 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3D0F89642E2C715D00FCB1C4;
-			remoteInfo = MenuPlayer;
+			remoteInfo = Focus;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		3D0F89652E2C715D00FCB1C4 /* MenuPlayer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MenuPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		3D0F89732E2C715E00FCB1C4 /* MenuPlayerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MenuPlayerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		3D0F897D2E2C715E00FCB1C4 /* MenuPlayerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MenuPlayerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D0F89652E2C715D00FCB1C4 /* Focus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Focus.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D0F89732E2C715E00FCB1C4 /* FocusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3D0F897D2E2C715E00FCB1C4 /* FocusUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		3D0F89672E2C715D00FCB1C4 /* MenuPlayer */ = {
+		3D0F89672E2C715D00FCB1C4 /* Focus */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MenuPlayer;
+			path = Focus;
 			sourceTree = "<group>";
 		};
-		3D0F89762E2C715E00FCB1C4 /* MenuPlayerTests */ = {
+		3D0F89762E2C715E00FCB1C4 /* FocusTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MenuPlayerTests;
+			path = FocusTests;
 			sourceTree = "<group>";
 		};
-		3D0F89802E2C715E00FCB1C4 /* MenuPlayerUITests */ = {
+		3D0F89802E2C715E00FCB1C4 /* FocusUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = MenuPlayerUITests;
+			path = FocusUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		3D0F895C2E2C715D00FCB1C4 = {
 			isa = PBXGroup;
 			children = (
-				3D0F89672E2C715D00FCB1C4 /* MenuPlayer */,
-				3D0F89762E2C715E00FCB1C4 /* MenuPlayerTests */,
-				3D0F89802E2C715E00FCB1C4 /* MenuPlayerUITests */,
+				3D0F89672E2C715D00FCB1C4 /* Focus */,
+				3D0F89762E2C715E00FCB1C4 /* FocusTests */,
+				3D0F89802E2C715E00FCB1C4 /* FocusUITests */,
 				3D0F89662E2C715D00FCB1C4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		3D0F89662E2C715D00FCB1C4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3D0F89652E2C715D00FCB1C4 /* MenuPlayer.app */,
-				3D0F89732E2C715E00FCB1C4 /* MenuPlayerTests.xctest */,
-				3D0F897D2E2C715E00FCB1C4 /* MenuPlayerUITests.xctest */,
+				3D0F89652E2C715D00FCB1C4 /* Focus.app */,
+				3D0F89732E2C715E00FCB1C4 /* FocusTests.xctest */,
+				3D0F897D2E2C715E00FCB1C4 /* FocusUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3D0F89642E2C715D00FCB1C4 /* MenuPlayer */ = {
+		3D0F89642E2C715D00FCB1C4 /* Focus */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3D0F89872E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "MenuPlayer" */;
+			buildConfigurationList = 3D0F89872E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "Focus" */;
 			buildPhases = (
 				3D0F89612E2C715D00FCB1C4 /* Sources */,
 				3D0F89622E2C715D00FCB1C4 /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				3D0F89672E2C715D00FCB1C4 /* MenuPlayer */,
+				3D0F89672E2C715D00FCB1C4 /* Focus */,
 			);
-			name = MenuPlayer;
+			name = Focus;
 			packageProductDependencies = (
 			);
-			productName = MenuPlayer;
-			productReference = 3D0F89652E2C715D00FCB1C4 /* MenuPlayer.app */;
+			productName = Focus;
+			productReference = 3D0F89652E2C715D00FCB1C4 /* Focus.app */;
 			productType = "com.apple.product-type.application";
 		};
-		3D0F89722E2C715E00FCB1C4 /* MenuPlayerTests */ = {
+		3D0F89722E2C715E00FCB1C4 /* FocusTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3D0F898A2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "MenuPlayerTests" */;
+			buildConfigurationList = 3D0F898A2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "FocusTests" */;
 			buildPhases = (
 				3D0F896F2E2C715E00FCB1C4 /* Sources */,
 				3D0F89702E2C715E00FCB1C4 /* Frameworks */,
@@ -131,18 +131,18 @@
 				3D0F89752E2C715E00FCB1C4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				3D0F89762E2C715E00FCB1C4 /* MenuPlayerTests */,
+				3D0F89762E2C715E00FCB1C4 /* FocusTests */,
 			);
-			name = MenuPlayerTests;
+			name = FocusTests;
 			packageProductDependencies = (
 			);
-			productName = MenuPlayerTests;
-			productReference = 3D0F89732E2C715E00FCB1C4 /* MenuPlayerTests.xctest */;
+			productName = FocusTests;
+			productReference = 3D0F89732E2C715E00FCB1C4 /* FocusTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		3D0F897C2E2C715E00FCB1C4 /* MenuPlayerUITests */ = {
+		3D0F897C2E2C715E00FCB1C4 /* FocusUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3D0F898D2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "MenuPlayerUITests" */;
+			buildConfigurationList = 3D0F898D2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "FocusUITests" */;
 			buildPhases = (
 				3D0F89792E2C715E00FCB1C4 /* Sources */,
 				3D0F897A2E2C715E00FCB1C4 /* Frameworks */,
@@ -154,13 +154,13 @@
 				3D0F897F2E2C715E00FCB1C4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				3D0F89802E2C715E00FCB1C4 /* MenuPlayerUITests */,
+				3D0F89802E2C715E00FCB1C4 /* FocusUITests */,
 			);
-			name = MenuPlayerUITests;
+			name = FocusUITests;
 			packageProductDependencies = (
 			);
-			productName = MenuPlayerUITests;
-			productReference = 3D0F897D2E2C715E00FCB1C4 /* MenuPlayerUITests.xctest */;
+			productName = FocusUITests;
+			productReference = 3D0F897D2E2C715E00FCB1C4 /* FocusUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 3D0F89602E2C715D00FCB1C4 /* Build configuration list for PBXProject "MenuPlayer" */;
+			buildConfigurationList = 3D0F89602E2C715D00FCB1C4 /* Build configuration list for PBXProject "Focus" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				3D0F89642E2C715D00FCB1C4 /* MenuPlayer */,
-				3D0F89722E2C715E00FCB1C4 /* MenuPlayerTests */,
-				3D0F897C2E2C715E00FCB1C4 /* MenuPlayerUITests */,
+				3D0F89642E2C715D00FCB1C4 /* Focus */,
+				3D0F89722E2C715E00FCB1C4 /* FocusTests */,
+				3D0F897C2E2C715E00FCB1C4 /* FocusUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		3D0F89752E2C715E00FCB1C4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3D0F89642E2C715D00FCB1C4 /* MenuPlayer */;
+			target = 3D0F89642E2C715D00FCB1C4 /* Focus */;
 			targetProxy = 3D0F89742E2C715E00FCB1C4 /* PBXContainerItemProxy */;
 		};
 		3D0F897F2E2C715E00FCB1C4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3D0F89642E2C715D00FCB1C4 /* MenuPlayer */;
+			target = 3D0F89642E2C715D00FCB1C4 /* Focus */;
 			targetProxy = 3D0F897E2E2C715E00FCB1C4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -392,7 +392,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = MenuPlayer/MenuPlayer.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Focus/Focus.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -404,7 +404,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.MenuPlayer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.Focus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -417,7 +417,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = MenuPlayer/MenuPlayer.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Focus/Focus.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -429,7 +429,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.MenuPlayer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.Focus;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -446,11 +446,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.MenuPlayerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.FocusTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MenuPlayer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MenuPlayer";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Focus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Focus";
 			};
 			name = Debug;
 		};
@@ -463,11 +463,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.MenuPlayerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.FocusTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MenuPlayer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MenuPlayer";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Focus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Focus";
 			};
 			name = Release;
 		};
@@ -478,11 +478,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.MenuPlayerUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.FocusUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = MenuPlayer;
+				TEST_TARGET_NAME = Focus;
 			};
 			name = Debug;
 		};
@@ -493,18 +493,18 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.MenuPlayerUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyang.FocusUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_TARGET_NAME = MenuPlayer;
+				TEST_TARGET_NAME = Focus;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		3D0F89602E2C715D00FCB1C4 /* Build configuration list for PBXProject "MenuPlayer" */ = {
+		3D0F89602E2C715D00FCB1C4 /* Build configuration list for PBXProject "Focus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3D0F89852E2C715E00FCB1C4 /* Debug */,
@@ -513,7 +513,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3D0F89872E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "MenuPlayer" */ = {
+		3D0F89872E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "Focus" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3D0F89882E2C715E00FCB1C4 /* Debug */,
@@ -522,7 +522,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3D0F898A2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "MenuPlayerTests" */ = {
+		3D0F898A2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "FocusTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3D0F898B2E2C715E00FCB1C4 /* Debug */,
@@ -531,7 +531,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3D0F898D2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "MenuPlayerUITests" */ = {
+		3D0F898D2E2C715E00FCB1C4 /* Build configuration list for PBXNativeTarget "FocusUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				3D0F898E2E2C715E00FCB1C4 /* Debug */,

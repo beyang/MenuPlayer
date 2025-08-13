@@ -39,14 +39,14 @@ final class PersistenceController {
     // URL state now uses UserDefaults for simplicity
     @MainActor
     func saveURLState(urlString: String, currentURL: String) {
-        UserDefaults.standard.set(urlString, forKey: "MenuPlayer.urlString")
-        UserDefaults.standard.set(currentURL, forKey: "MenuPlayer.currentURL")
+        UserDefaults.standard.set(urlString, forKey: "Focus.urlString")
+        UserDefaults.standard.set(currentURL, forKey: "Focus.currentURL")
     }
 
     @MainActor
     func loadURLState() -> (urlString: String, currentURL: String) {
-        let urlString = UserDefaults.standard.string(forKey: "MenuPlayer.urlString") ?? "https://www.google.com"
-        let currentURL = UserDefaults.standard.string(forKey: "MenuPlayer.currentURL") ?? "https://www.google.com"
+        let urlString = UserDefaults.standard.string(forKey: "Focus.urlString") ?? "https://www.google.com"
+        let currentURL = UserDefaults.standard.string(forKey: "Focus.currentURL") ?? "https://www.google.com"
         return (urlString, currentURL)
     }
 
