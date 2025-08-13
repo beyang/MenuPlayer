@@ -47,8 +47,8 @@ struct StyledTextField: View {
             .onSubmit {
                 onSubmit()
             }
-            .onChange(of: text) { newValue in
-                onChange?(newValue)
+            .onChange(of: text) {
+                onChange?(text)
             }
     }
 }
@@ -77,6 +77,8 @@ struct ContentView: View {
     @State private var errorMessage = ""
     @State private var activeTimers: [ActiveTimer] = []
     @State private var timerUpdateTimer: Timer?
+    @State private var escPressCount = 0
+    @State private var escResetTimer: Timer?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -145,6 +147,11 @@ struct ContentView: View {
         }
         .onDisappear {
             timerUpdateTimer?.invalidate()
+            escResetTimer?.invalidate()
+        }
+        .onKeyPress(.escape) {
+            handleEscapePress()
+            return .handled
         }
     }
 
@@ -243,7 +250,7 @@ struct ContentView: View {
                     Text(">")
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(.secondary)
-                    
+
                     StyledTextField(
                         placeholder: "Enter command",
                         text: $commandInput,
@@ -464,6 +471,25 @@ struct ContentView: View {
             return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         } else {
             return String(format: "%02d:%02d", minutes, seconds)
+        }
+    }
+
+    private func handleEscapePress() {
+        escPressCount += 1
+
+        // Cancel any existing reset timer
+        escResetTimer?.invalidate()
+
+        if escPressCount >= 2 {
+            // Hide the app window
+            NSApplication.shared.keyWindow?.close()
+            // Reset counter after closing
+            escPressCount = 0
+        } else {
+            // Start a timer to reset the counter after 1 second
+            escResetTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+                self.escPressCount = 0
+            }
         }
     }
 
