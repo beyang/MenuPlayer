@@ -176,11 +176,11 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Text("> notif <message> - Show notification")
+                Text("notif <message> - Show notification")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
 
-                Text("> timer <time> - Set timer (5s, 5h, 8:00, 16:00, 5pm)")
+                Text("timer <time> - Set timer (5s, 5h, 8:00, 16:00, 5pm)")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -239,16 +239,22 @@ struct ContentView: View {
                         .cornerRadius(4)
                 }
 
-                StyledTextField(
-                    placeholder: "Enter command (prefix with '>')",
-                    text: $commandInput,
-                    onSubmit: processCommand,
-                    onChange: { _ in
-                        if !errorMessage.isEmpty {
-                            errorMessage = ""
+                HStack(spacing: 4) {
+                    Text(">")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    
+                    StyledTextField(
+                        placeholder: "Enter command",
+                        text: $commandInput,
+                        onSubmit: processCommand,
+                        onChange: { _ in
+                            if !errorMessage.isEmpty {
+                                errorMessage = ""
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
             .padding()
         }
@@ -265,17 +271,15 @@ struct ContentView: View {
     }
 
     private func processCommand() {
-        let command = commandInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let commandContent = commandInput.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Clear previous error
         errorMessage = ""
 
-        guard command.hasPrefix(">") else {
-            errorMessage = "Commands must start with '>'"
+        guard !commandContent.isEmpty else {
+            errorMessage = "Please enter a command"
             return
         }
-
-        let commandContent = String(command.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
 
         if commandContent.hasPrefix("notif ") {
             let message = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
