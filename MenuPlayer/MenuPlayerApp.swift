@@ -17,7 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct MenuPlayerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
     var body: some Scene {
         MenuBarExtra("MenuPlayer", systemImage: "play.fill") {
             ContentView()

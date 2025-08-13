@@ -10,13 +10,13 @@ import WebKit
 
 struct WebView: NSViewRepresentable {
     let url: URL
-    
+
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView()
         print("WebView created")
         return webView
     }
-    
+
     func updateNSView(_ nsView: WKWebView, context: Context) {
         let request = URLRequest(url: url)
         print("Loading URL: \(url)")
@@ -27,7 +27,7 @@ struct WebView: NSViewRepresentable {
 struct ContentView: View {
     @State private var urlString = "https://www.google.com"
     @State private var currentURL: URL = URL(string: "https://www.google.com")!
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header with title and URL bar
@@ -35,14 +35,14 @@ struct ContentView: View {
                 Text("MenuPlayer")
                     .font(.title2)
                     .fontWeight(.medium)
-                
+
                 HStack(spacing: 8) {
                     TextField("Enter URL", text: $urlString)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .onSubmit {
                             navigateToURL()
                         }
-                    
+
                     Button("Go") {
                         navigateToURL()
                     }
@@ -52,20 +52,20 @@ struct ContentView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color(NSColor.controlBackgroundColor))
-            
+
             // Main content area with WebView
             WebView(url: currentURL)
                 .background(Color.white)
-            
+
             // Bottom toolbar
             HStack {
                 Button("Refresh") {
                     currentURL = currentURL
                 }
                 .buttonStyle(.borderless)
-                
+
                 Spacer()
-                
+
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
@@ -77,10 +77,10 @@ struct ContentView: View {
         }
         .frame(minWidth: 600, minHeight: 400)
     }
-    
+
     private func navigateToURL() {
         var processedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         // Check if URL has a scheme
         if !processedURL.contains("://") {
             // Add https:// if no scheme is provided
@@ -88,7 +88,7 @@ struct ContentView: View {
             // Update the text field to show the complete URL
             urlString = processedURL
         }
-        
+
         if let url = URL(string: processedURL) {
             currentURL = url
         }
