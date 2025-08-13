@@ -14,6 +14,7 @@ struct ActiveTimer: Identifiable {
     let id: String
     let originalInput: String
     let endTime: Date
+    let message: String?
 
     var remainingTime: TimeInterval {
         endTime.timeIntervalSince(Date())
@@ -187,7 +188,7 @@ struct ContentView: View {
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
 
-                Text("timer <time> - Set timer (5s, 5h, 8:00, 16:00, 5pm)")
+                Text("timer <time> [message] - Set timer (5s, 5h, 8:00, 16:00, 5pm, 4:30pm)")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -203,26 +204,35 @@ struct ContentView: View {
                         .padding(.horizontal)
 
                     ForEach(activeTimers) { timer in
-                        HStack {
-                            Text(timer.originalInput)
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack {
+                                Text(timer.originalInput)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.primary)
 
-                            Spacer()
+                                Spacer()
 
-                            Text(formatRemainingTime(timer.remainingTime))
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.secondary)
+                                Text(formatRemainingTime(timer.remainingTime))
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
 
-                            Button(action: {
-                                cancelTimer(timer)
-                            }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(.secondary)
+                                Button(action: {
+                                    cancelTimer(timer)
+                                }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .frame(width: 16, height: 16)
                             }
-                            .buttonStyle(.plain)
-                            .frame(width: 16, height: 16)
+
+                            if let message = timer.message, !message.isEmpty {
+                                Text(message)
+                                    .font(.system(.caption2))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 2)
+                            }
                         }
                         .padding(.horizontal)
                         .padding(.vertical, 2)
@@ -297,13 +307,17 @@ struct ContentView: View {
                 errorMessage = "notif command requires a message"
             }
         } else if commandContent.hasPrefix("timer ") {
-            let timeString = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !timeString.isEmpty {
+            let timerArgs = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !timerArgs.isEmpty {
+                let components = timerArgs.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+                let timeString = String(components[0])
+                let message = components.count > 1 ? String(components[1]) : nil
+
                 if let timeInterval = parseTimeString(timeString) {
-                    scheduleTimer(timeInterval: timeInterval, originalInput: timeString)
+                    scheduleTimer(timeInterval: timeInterval, originalInput: timeString, message: message)
                     commandInput = ""
                 } else {
-                    errorMessage = "Invalid time format. Use: 5s, 5h, 8:00, 16:00, or 5pm"
+                    errorMessage = "Invalid time format. Use: 5s, 5h, 8:00, 16:00, 5pm, or 4:30pm"
                 }
             } else {
                 errorMessage = "timer command requires a time specification"
@@ -372,10 +386,21 @@ struct ContentView: View {
         let now = Date()
         let calendar = Calendar.current
 
-        // Handle PM times (5pm, 12pm)
+        // Handle PM times (5pm, 12pm, 4:30pm, 12:15pm)
         if input.hasSuffix("pm") {
             let timeStr = String(input.dropLast(2))
-            if let hour = Int(timeStr) {
+            if timeStr.contains(":") {
+                let components = timeStr.split(separator: ":")
+                if components.count == 2,
+                   let hour = Int(components[0]),
+                   let minute = Int(components[1]) {
+                    let adjustedHour = hour == 12 ? 12 : hour + 12
+                    if let targetDate = calendar.date(bySettingHour: adjustedHour, minute: minute, second: 0, of: now) {
+                        let interval = targetDate.timeIntervalSince(now)
+                        return interval > 0 ? interval : interval + 24 * 3600 // Next day if time has passed
+                    }
+                }
+            } else if let hour = Int(timeStr) {
                 let adjustedHour = hour == 12 ? 12 : hour + 12
                 if let targetDate = calendar.date(bySettingHour: adjustedHour, minute: 0, second: 0, of: now) {
                     let interval = targetDate.timeIntervalSince(now)
@@ -384,10 +409,21 @@ struct ContentView: View {
             }
         }
 
-        // Handle AM times (5am, 12am)
+        // Handle AM times (5am, 12am, 8:15am, 12:30am)
         if input.hasSuffix("am") {
             let timeStr = String(input.dropLast(2))
-            if let hour = Int(timeStr) {
+            if timeStr.contains(":") {
+                let components = timeStr.split(separator: ":")
+                if components.count == 2,
+                   let hour = Int(components[0]),
+                   let minute = Int(components[1]) {
+                    let adjustedHour = hour == 12 ? 0 : hour
+                    if let targetDate = calendar.date(bySettingHour: adjustedHour, minute: minute, second: 0, of: now) {
+                        let interval = targetDate.timeIntervalSince(now)
+                        return interval > 0 ? interval : interval + 24 * 3600 // Next day if time has passed
+                    }
+                }
+            } else if let hour = Int(timeStr) {
                 let adjustedHour = hour == 12 ? 0 : hour
                 if let targetDate = calendar.date(bySettingHour: adjustedHour, minute: 0, second: 0, of: now) {
                     let interval = targetDate.timeIntervalSince(now)
@@ -412,11 +448,16 @@ struct ContentView: View {
         return nil
     }
 
-    private func scheduleTimer(timeInterval: TimeInterval, originalInput: String) {
+    private func scheduleTimer(timeInterval: TimeInterval, originalInput: String, message: String?) {
         let timerId = UUID().uuidString
         let content = UNMutableNotificationContent()
         content.title = "Timer"
-        content.body = "Timer set for \(originalInput) has finished!"
+
+        if let message = message, !message.isEmpty {
+            content.body = "\(message) (Timer: \(originalInput))"
+        } else {
+            content.body = "Timer set for \(originalInput) has finished!"
+        }
         content.sound = UNNotificationSound.default
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeInterval, repeats: false)
@@ -434,7 +475,7 @@ struct ContentView: View {
             } else {
                 DispatchQueue.main.async {
                     let endTime = Date().addingTimeInterval(timeInterval)
-                    let activeTimer = ActiveTimer(id: timerId, originalInput: originalInput, endTime: endTime)
+                    let activeTimer = ActiveTimer(id: timerId, originalInput: originalInput, endTime: endTime, message: message)
                     self.activeTimers.append(activeTimer)
                 }
                 print("Timer scheduled for \(timeInterval) seconds")
