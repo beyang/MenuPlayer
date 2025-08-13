@@ -8,6 +8,7 @@
 import SwiftUI
 import WebKit
 import UserNotifications
+import Foundation
 import AppKit
 
 struct ActiveTimer: Identifiable {
@@ -77,9 +78,11 @@ struct ContentView: View {
     @State private var showingCommandPanel = true
     @State private var errorMessage = ""
     @State private var activeTimers: [ActiveTimer] = []
-    @State private var timerUpdateTimer: Timer?
+    @State private var timerUpdateTimer: Foundation.Timer?
     @State private var escPressCount = 0
-    @State private var escResetTimer: Timer?
+    @State private var escResetTimer: Foundation.Timer?
+
+    let persistenceController = PersistenceController.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -145,10 +148,12 @@ struct ContentView: View {
         .onAppear {
             requestNotificationPermission()
             startTimerUpdateTimer()
+            loadPersistedState()
         }
         .onDisappear {
             timerUpdateTimer?.invalidate()
             escResetTimer?.invalidate()
+            savePersistedState()
         }
         .onKeyPress(.escape) {
             handleEscapePress()
@@ -477,6 +482,7 @@ struct ContentView: View {
                     let endTime = Date().addingTimeInterval(timeInterval)
                     let activeTimer = ActiveTimer(id: timerId, originalInput: originalInput, endTime: endTime, message: message)
                     self.activeTimers.append(activeTimer)
+                    self.savePersistedState()
                 }
                 print("Timer scheduled for \(timeInterval) seconds")
             }
@@ -484,18 +490,23 @@ struct ContentView: View {
     }
 
     private func startTimerUpdateTimer() {
-        timerUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+        timerUpdateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             updateActiveTimers()
         }
     }
 
     private func updateActiveTimers() {
+        let oldCount = activeTimers.count
         activeTimers.removeAll { $0.isExpired }
+        if activeTimers.count != oldCount {
+            savePersistedState()
+        }
     }
 
     private func cancelTimer(_ timer: ActiveTimer) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [timer.id])
         activeTimers.removeAll { $0.id == timer.id }
+        savePersistedState()
     }
 
     private func formatRemainingTime(_ timeInterval: TimeInterval) -> String {
@@ -528,7 +539,7 @@ struct ContentView: View {
             escPressCount = 0
         } else {
             // Start a timer to reset the counter after 1 second
-            escResetTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+            escResetTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
                 self.escPressCount = 0
             }
         }
@@ -548,6 +559,21 @@ struct ContentView: View {
         if let url = URL(string: processedURL) {
             currentURL = url
         }
+        savePersistedState()
+    }
+
+    private func loadPersistedState() {
+        let state = persistenceController.loadURLState()
+        urlString = state.urlString
+        if let url = URL(string: state.currentURL) {
+            currentURL = url
+        }
+        activeTimers = persistenceController.loadTimers()
+    }
+
+    private func savePersistedState() {
+        persistenceController.saveURLState(urlString: urlString, currentURL: currentURL.absoluteString)
+        persistenceController.saveTimers(activeTimers)
     }
 }
 

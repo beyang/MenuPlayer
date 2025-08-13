@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import CoreData
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -17,10 +18,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct MenuPlayerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    let persistenceController = PersistenceController.shared
 
     var body: some Scene {
         MenuBarExtra("MenuPlayer", systemImage: "play.fill") {
             ContentView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
         .menuBarExtraStyle(.window)
     }
