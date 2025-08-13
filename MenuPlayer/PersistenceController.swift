@@ -97,12 +97,11 @@ final class PersistenceController {
             return timers.compactMap { timer in
                 guard let id = timer.id,
                       let originalInput = timer.originalInput,
-                      let endTime = timer.endTime,
-                      let message = timer.message else {
-                    print("Warning: CDTimer with nil attributes found, skipping")
+                      let endTime = timer.endTime else {
+                    print("Warning: CDTimer with nil required attributes found, skipping")
                     return nil
                 }
-                return ActiveTimer(id: id, originalInput: originalInput, endTime: endTime, message: message)
+                return ActiveTimer(id: id, originalInput: originalInput, endTime: endTime, message: timer.message)
             }.filter { !$0.isExpired }
         } catch {
             print("Error loading timers: \(error)")

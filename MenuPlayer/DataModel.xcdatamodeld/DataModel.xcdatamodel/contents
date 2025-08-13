@@ -3,7 +3,7 @@
     <entity name="CDTimer" representedClassName="CDTimer" syncable="YES" codeGenerationType="class">
         <attribute name="endTime" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="id" attributeType="String"/>
-        <attribute name="message" attributeType="String"/>
+        <attribute name="message" optional="YES" attributeType="String"/>
         <attribute name="originalInput" attributeType="String"/>
     </entity>
 </model>
