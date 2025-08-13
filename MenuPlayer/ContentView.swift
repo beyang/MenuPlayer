@@ -130,6 +130,10 @@ struct ContentView: View {
                 Text("> notif <message> - Show notification")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
+
+                Text("> timer <time> - Set timer (5s, 5h, 8:00, 16:00, 5pm)")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -201,6 +205,18 @@ struct ContentView: View {
             } else {
                 errorMessage = "notif command requires a message"
             }
+        } else if commandContent.hasPrefix("timer ") {
+            let timeString = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !timeString.isEmpty {
+                if let timeInterval = parseTimeString(timeString) {
+                    scheduleTimer(timeInterval: timeInterval, originalInput: timeString)
+                    commandInput = ""
+                } else {
+                    errorMessage = "Invalid time format. Use: 5s, 5h, 8:00, 16:00, or 5pm"
+                }
+            } else {
+                errorMessage = "timer command requires a time specification"
+            }
         } else {
             let unknownCmd = commandContent.split(separator: " ").first ?? ""
             errorMessage = "Unknown command: '\(unknownCmd)'"
@@ -219,14 +235,14 @@ struct ContentView: View {
         content.body = message
         content.sound = UNNotificationSound.default
 
-        // Also play a system alert sound as backup
-        DispatchQueue.main.async {
-            if let alertSound = NSSound(named: "Ping") {
-                alertSound.play()
-            } else {
-                NSSound.beep() // Fallback if Ping isn't available
-            }
-        }
+//        // Also play a system alert sound as backup
+//        DispatchQueue.main.async {
+//            if let alertSound = NSSound(named: "Ping") {
+//                alertSound.play()
+//            } else {
+//                NSSound.beep() // Fallback if Ping isn't available
+//            }
+//        }
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
@@ -239,6 +255,92 @@ struct ContentView: View {
                 print("Notification error: \(error)")
             } else {
                 print("Notification added successfully")
+            }
+        }
+    }
+
+    private func parseTimeString(_ timeString: String) -> TimeInterval? {
+        let input = timeString.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Handle duration formats (5s, 5m, 5h)
+        if input.hasSuffix("s") {
+            if let seconds = Double(String(input.dropLast())) {
+                return seconds
+            }
+        } else if input.hasSuffix("m") {
+            if let minutes = Double(String(input.dropLast())) {
+                return minutes * 60
+            }
+        } else if input.hasSuffix("h") {
+            if let hours = Double(String(input.dropLast())) {
+                return hours * 3600
+            }
+        }
+
+        // Handle absolute time formats (8:00, 16:00, 5pm)
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Handle PM times (5pm, 12pm)
+        if input.hasSuffix("pm") {
+            let timeStr = String(input.dropLast(2))
+            if let hour = Int(timeStr) {
+                let adjustedHour = hour == 12 ? 12 : hour + 12
+                if let targetDate = calendar.date(bySettingHour: adjustedHour, minute: 0, second: 0, of: now) {
+                    let interval = targetDate.timeIntervalSince(now)
+                    return interval > 0 ? interval : interval + 24 * 3600 // Next day if time has passed
+                }
+            }
+        }
+
+        // Handle AM times (5am, 12am)
+        if input.hasSuffix("am") {
+            let timeStr = String(input.dropLast(2))
+            if let hour = Int(timeStr) {
+                let adjustedHour = hour == 12 ? 0 : hour
+                if let targetDate = calendar.date(bySettingHour: adjustedHour, minute: 0, second: 0, of: now) {
+                    let interval = targetDate.timeIntervalSince(now)
+                    return interval > 0 ? interval : interval + 24 * 3600 // Next day if time has passed
+                }
+            }
+        }
+
+        // Handle 24-hour format (8:00, 16:30)
+        if input.contains(":") {
+            let components = input.split(separator: ":")
+            if components.count == 2,
+               let hour = Int(components[0]),
+               let minute = Int(components[1]) {
+                if let targetDate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: now) {
+                    let interval = targetDate.timeIntervalSince(now)
+                    return interval > 0 ? interval : interval + 24 * 3600 // Next day if time has passed
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func scheduleTimer(timeInterval: TimeInterval, originalInput: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Timer"
+        content.body = "Timer set for \(originalInput) has finished!"
+        content.sound = UNNotificationSound.default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeInterval, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: trigger
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to schedule timer: \(error.localizedDescription)"
+                }
+            } else {
+                print("Timer scheduled for \(timeInterval) seconds")
             }
         }
     }
