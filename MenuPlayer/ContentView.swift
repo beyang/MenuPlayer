@@ -211,7 +211,11 @@ struct ContentView: View {
                 }
 
                 TextField("Enter command (prefix with '>')", text: $commandInput)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textFieldStyle(.plain)
+                    .font(.system(.body, design: .monospaced))
+                    .padding(8)
+                    .background(Color.black.opacity(0.1))
+                    .cornerRadius(4)
                     .onSubmit {
                         processCommand()
                     }
@@ -220,12 +224,6 @@ struct ContentView: View {
                             errorMessage = ""
                         }
                     }
-
-                Button("Execute") {
-                    processCommand()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(commandInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
         }
