@@ -10,6 +10,20 @@ import WebKit
 import UserNotifications
 import AppKit
 
+struct ActiveTimer: Identifiable {
+    let id: String
+    let originalInput: String
+    let endTime: Date
+
+    var remainingTime: TimeInterval {
+        endTime.timeIntervalSince(Date())
+    }
+
+    var isExpired: Bool {
+        remainingTime <= 0
+    }
+}
+
 struct WebView: NSViewRepresentable {
     let url: URL
 
@@ -32,6 +46,8 @@ struct ContentView: View {
     @State private var commandInput = ""
     @State private var showingCommandPanel = true
     @State private var errorMessage = ""
+    @State private var activeTimers: [ActiveTimer] = []
+    @State private var timerUpdateTimer: Timer?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -96,6 +112,10 @@ struct ContentView: View {
         .frame(minWidth: 1200, minHeight: 800)
         .onAppear {
             requestNotificationPermission()
+            startTimerUpdateTimer()
+        }
+        .onDisappear {
+            timerUpdateTimer?.invalidate()
         }
     }
 
@@ -137,6 +157,43 @@ struct ContentView: View {
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Active timers section
+            if !activeTimers.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Active Timers:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+
+                    ForEach(activeTimers) { timer in
+                        HStack {
+                            Text(timer.originalInput)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Text(formatRemainingTime(timer.remainingTime))
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.secondary)
+
+                            Button(action: {
+                                cancelTimer(timer)
+                            }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .frame(width: 16, height: 16)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 2)
+                    }
+                }
+                .padding(.bottom, 8)
+            }
 
             Spacer()
 
@@ -322,6 +379,7 @@ struct ContentView: View {
     }
 
     private func scheduleTimer(timeInterval: TimeInterval, originalInput: String) {
+        let timerId = UUID().uuidString
         let content = UNMutableNotificationContent()
         content.title = "Timer"
         content.body = "Timer set for \(originalInput) has finished!"
@@ -329,7 +387,7 @@ struct ContentView: View {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeInterval, repeats: false)
         let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
+            identifier: timerId,
             content: content,
             trigger: trigger
         )
@@ -340,8 +398,45 @@ struct ContentView: View {
                     self.errorMessage = "Failed to schedule timer: \(error.localizedDescription)"
                 }
             } else {
+                DispatchQueue.main.async {
+                    let endTime = Date().addingTimeInterval(timeInterval)
+                    let activeTimer = ActiveTimer(id: timerId, originalInput: originalInput, endTime: endTime)
+                    self.activeTimers.append(activeTimer)
+                }
                 print("Timer scheduled for \(timeInterval) seconds")
             }
+        }
+    }
+
+    private func startTimerUpdateTimer() {
+        timerUpdateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            updateActiveTimers()
+        }
+    }
+
+    private func updateActiveTimers() {
+        activeTimers.removeAll { $0.isExpired }
+    }
+
+    private func cancelTimer(_ timer: ActiveTimer) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [timer.id])
+        activeTimers.removeAll { $0.id == timer.id }
+    }
+
+    private func formatRemainingTime(_ timeInterval: TimeInterval) -> String {
+        if timeInterval <= 0 {
+            return "00:00"
+        }
+
+        let totalSeconds = Int(timeInterval)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
         }
     }
 
