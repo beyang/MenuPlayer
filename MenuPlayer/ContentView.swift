@@ -24,6 +24,35 @@ struct ActiveTimer: Identifiable {
     }
 }
 
+struct StyledTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    let onSubmit: () -> Void
+    let onChange: ((String) -> Void)?
+
+    init(placeholder: String, text: Binding<String>, onSubmit: @escaping () -> Void, onChange: ((String) -> Void)? = nil) {
+        self.placeholder = placeholder
+        self._text = text
+        self.onSubmit = onSubmit
+        self.onChange = onChange
+    }
+
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .textFieldStyle(.plain)
+            .font(.system(.body, design: .monospaced))
+            .padding(8)
+            .background(Color.black.opacity(0.1))
+            .cornerRadius(4)
+            .onSubmit {
+                onSubmit()
+            }
+            .onChange(of: text) { newValue in
+                onChange?(newValue)
+            }
+    }
+}
+
 struct WebView: NSViewRepresentable {
     let url: URL
 
@@ -58,11 +87,11 @@ struct ContentView: View {
                     .fontWeight(.medium)
 
                 HStack(spacing: 8) {
-                    TextField("Enter URL", text: $urlString)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .onSubmit {
-                            navigateToURL()
-                        }
+                    StyledTextField(
+                        placeholder: "Enter URL",
+                        text: $urlString,
+                        onSubmit: navigateToURL
+                    )
 
                     Button("Go") {
                         navigateToURL()
@@ -210,20 +239,16 @@ struct ContentView: View {
                         .cornerRadius(4)
                 }
 
-                TextField("Enter command (prefix with '>')", text: $commandInput)
-                    .textFieldStyle(.plain)
-                    .font(.system(.body, design: .monospaced))
-                    .padding(8)
-                    .background(Color.black.opacity(0.1))
-                    .cornerRadius(4)
-                    .onSubmit {
-                        processCommand()
-                    }
-                    .onChange(of: commandInput) {
+                StyledTextField(
+                    placeholder: "Enter command (prefix with '>')",
+                    text: $commandInput,
+                    onSubmit: processCommand,
+                    onChange: { _ in
                         if !errorMessage.isEmpty {
                             errorMessage = ""
                         }
                     }
+                )
             }
             .padding()
         }
