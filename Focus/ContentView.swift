@@ -122,6 +122,7 @@ struct ContentView: View {
     @State private var timerUpdateTimer: Foundation.Timer?
     @State private var escPressCount = 0
     @State private var escResetTimer: Foundation.Timer?
+    @State private var uiRefreshTrigger = false
 
     let persistenceController = PersistenceController.shared
 
@@ -604,6 +605,11 @@ struct ContentView: View {
         activeTimers.removeAll { $0.isExpired }
         if activeTimers.count != oldCount {
             savePersistedState()
+        }
+
+        // Force UI refresh for focus item clocks when there are active items
+        if !activeTimers.isEmpty || focusItems.contains(where: { $0.isActive }) {
+            uiRefreshTrigger.toggle()
         }
     }
 
