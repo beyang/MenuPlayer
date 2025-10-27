@@ -305,7 +305,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
 
-                    ForEach(activeTimers) { timer in
+                    ForEach(activeTimers.sorted { $0.remainingTime < $1.remainingTime }) { timer in
                         VStack(alignment: .leading, spacing: 2) {
                             HStack {
                                 Text(timer.originalInput)
