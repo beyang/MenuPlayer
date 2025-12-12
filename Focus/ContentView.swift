@@ -111,7 +111,87 @@ struct WebView: NSViewRepresentable {
     }
 }
 
+enum AppTab: String, CaseIterable {
+    case reminders = "Reminders"
+    case todo = "Todo"
+    
+    var icon: String {
+        switch self {
+        case .reminders: return "bell.fill"
+        case .todo: return "checklist"
+        }
+    }
+}
+
 struct ContentView: View {
+    @State private var selectedTab: AppTab = .reminders
+    @State private var escPressCount = 0
+    @State private var escResetTimer: Foundation.Timer?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Tab bar
+            HStack(spacing: 0) {
+                ForEach(AppTab.allCases, id: \.self) { tab in
+                    Button(action: { selectedTab = tab }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: tab.icon)
+                            Text(tab.rawValue)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(selectedTab == tab ? Color.accentColor.opacity(0.2) : Color.clear)
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+                }
+                Spacer()
+                
+                Button("Quit") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .buttonStyle(.borderless)
+                .padding(.trailing, 8)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(NSColor.controlBackgroundColor))
+            
+            // Tab content
+            switch selectedTab {
+            case .reminders:
+                RemindersView()
+            case .todo:
+                TodoView()
+            }
+        }
+        .frame(minWidth: 1200, minHeight: 800)
+        .onDisappear {
+            escResetTimer?.invalidate()
+        }
+        .onKeyPress(.escape) {
+            handleEscapePress()
+            return .handled
+        }
+    }
+    
+    private func handleEscapePress() {
+        escPressCount += 1
+        escResetTimer?.invalidate()
+        
+        if escPressCount >= 2 {
+            NSApplication.shared.keyWindow?.close()
+            escPressCount = 0
+        } else {
+            escResetTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
+                self.escPressCount = 0
+            }
+        }
+    }
+}
+
+struct RemindersView: View {
     @State private var urlString = "https://www.google.com"
     @State private var currentURL: URL = URL(string: "https://www.google.com")!
     @State private var commandInput = ""
@@ -120,20 +200,14 @@ struct ContentView: View {
     @State private var activeTimers: [ActiveTimer] = []
     @State private var focusItems: [FocusItem] = []
     @State private var timerUpdateTimer: Foundation.Timer?
-    @State private var escPressCount = 0
-    @State private var escResetTimer: Foundation.Timer?
     @State private var uiRefreshTrigger = false
 
     let persistenceController = PersistenceController.shared
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with title and URL bar
+            // Header with URL bar
             VStack(spacing: 12) {
-                Text("Focus")
-                    .font(.title2)
-                    .fontWeight(.medium)
-
                 HStack(spacing: 8) {
                     StyledTextField(
                         placeholder: "Enter URL",
@@ -176,17 +250,11 @@ struct ContentView: View {
                 .buttonStyle(.borderless)
 
                 Spacer()
-
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .buttonStyle(.borderless)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(Color(NSColor.controlBackgroundColor))
         }
-        .frame(minWidth: 1200, minHeight: 800)
         .onAppear {
             requestNotificationPermission()
             startTimerUpdateTimer()
@@ -194,12 +262,7 @@ struct ContentView: View {
         }
         .onDisappear {
             timerUpdateTimer?.invalidate()
-            escResetTimer?.invalidate()
             savePersistedState()
-        }
-        .onKeyPress(.escape) {
-            handleEscapePress()
-            return .handled
         }
     }
 
@@ -678,25 +741,6 @@ struct ContentView: View {
 
     private func removeFocus(_ focus: FocusItem) {
         focusItems.removeAll { $0.id == focus.id }
-    }
-
-    private func handleEscapePress() {
-        escPressCount += 1
-
-        // Cancel any existing reset timer
-        escResetTimer?.invalidate()
-
-        if escPressCount >= 2 {
-            // Hide the app window
-            NSApplication.shared.keyWindow?.close()
-            // Reset counter after closing
-            escPressCount = 0
-        } else {
-            // Start a timer to reset the counter after 1 second
-            escResetTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in
-                self.escPressCount = 0
-            }
-        }
     }
 
     private func navigateToURL() {
