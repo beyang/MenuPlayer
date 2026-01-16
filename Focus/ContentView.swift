@@ -101,79 +101,35 @@ struct WebView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView()
         print("WebView created")
+        let request = URLRequest(url: url)
+        webView.load(request)
         return webView
     }
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
-        let request = URLRequest(url: url)
-        print("Loading URL: \(url)")
-        nsView.load(request)
-    }
-}
-
-enum AppTab: String, CaseIterable {
-    case reminders = "Reminders"
-    case todo = "Todo"
-    
-    var icon: String {
-        switch self {
-        case .reminders: return "bell.fill"
-        case .todo: return "checklist"
+        // Only reload if the URL actually changed
+        if nsView.url != url {
+            let request = URLRequest(url: url)
+            print("Loading URL: \(url)")
+            nsView.load(request)
         }
     }
 }
 
 struct ContentView: View {
-    @State private var selectedTab: AppTab = .reminders
     @State private var escPressCount = 0
     @State private var escResetTimer: Foundation.Timer?
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Tab bar
-            HStack(spacing: 0) {
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    Button(action: { selectedTab = tab }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: tab.icon)
-                            Text(tab.rawValue)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(selectedTab == tab ? Color.accentColor.opacity(0.2) : Color.clear)
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
-                }
-                Spacer()
-                
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .buttonStyle(.borderless)
-                .padding(.trailing, 8)
+        RemindersView()
+            .frame(minWidth: 1400, minHeight: 1000)
+            .onDisappear {
+                escResetTimer?.invalidate()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color(NSColor.controlBackgroundColor))
-            
-            // Tab content
-            switch selectedTab {
-            case .reminders:
-                RemindersView()
-            case .todo:
-                TodoView()
+            .onKeyPress(.escape) {
+                handleEscapePress()
+                return .handled
             }
-        }
-        .frame(minWidth: 1200, minHeight: 800)
-        .onDisappear {
-            escResetTimer?.invalidate()
-        }
-        .onKeyPress(.escape) {
-            handleEscapePress()
-            return .handled
-        }
     }
     
     private func handleEscapePress() {
@@ -225,7 +181,7 @@ struct RemindersView: View {
             .padding(.vertical, 12)
             .background(Color(NSColor.controlBackgroundColor))
 
-            // Main content area with WebView and Command Panel
+            // Main content area with WebView, Command Panel, and Todo
             HStack(spacing: 0) {
                 WebView(url: currentURL)
                     .background(Color.white)
@@ -233,6 +189,10 @@ struct RemindersView: View {
                 if showingCommandPanel {
                     commandPanel
                         .frame(width: 300)
+                        .background(Color(NSColor.controlBackgroundColor))
+                    
+                    TodoView()
+                        .frame(width: 450)
                         .background(Color(NSColor.controlBackgroundColor))
                 }
             }
