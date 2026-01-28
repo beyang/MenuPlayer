@@ -183,16 +183,18 @@ struct RemindersView: View {
 
             // Main content area with WebView, Command Panel, and Todo
             HStack(spacing: 0) {
+                if showingCommandPanel {
+                    TodoView()
+                        .frame(width: 450)
+                        .background(Color(NSColor.controlBackgroundColor))
+                }
+
                 WebView(url: currentURL)
                     .background(Color.white)
 
                 if showingCommandPanel {
                     commandPanel
                         .frame(width: 300)
-                        .background(Color(NSColor.controlBackgroundColor))
-                    
-                    TodoView()
-                        .frame(width: 450)
                         .background(Color(NSColor.controlBackgroundColor))
                 }
             }
