@@ -101,9 +101,8 @@ struct TodoView: View {
             // Header with file path
             HStack {
                 Text("Todo")
-                    .font(.title2)
-                    .fontWeight(.medium)
-                
+                    .font(.headline)
+
                 Spacer()
                 
                 Button(action: { showingFilePathEditor.toggle() }) {

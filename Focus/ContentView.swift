@@ -69,12 +69,20 @@ struct FocusItem: Identifiable {
 struct StyledTextField: View {
     let placeholder: String
     @Binding var text: String
+    let font: Font
     let onSubmit: () -> Void
     let onChange: ((String) -> Void)?
 
-    init(placeholder: String, text: Binding<String>, onSubmit: @escaping () -> Void, onChange: ((String) -> Void)? = nil) {
+    init(
+        placeholder: String,
+        text: Binding<String>,
+        font: Font = .system(.body, design: .monospaced),
+        onSubmit: @escaping () -> Void,
+        onChange: ((String) -> Void)? = nil
+    ) {
         self.placeholder = placeholder
         self._text = text
+        self.font = font
         self.onSubmit = onSubmit
         self.onChange = onChange
     }
@@ -82,7 +90,7 @@ struct StyledTextField: View {
     var body: some View {
         TextField(placeholder, text: $text)
             .textFieldStyle(.plain)
-            .font(.system(.body, design: .monospaced))
+            .font(font)
             .padding(8)
             .background(Color.black.opacity(0.1))
             .cornerRadius(4)
@@ -97,6 +105,19 @@ struct StyledTextField: View {
 
 struct WebView: NSViewRepresentable {
     let url: URL
+    let reloadToken: Int
+
+    class Coordinator {
+        var lastReloadToken: Int
+
+        init(reloadToken: Int) {
+            self.lastReloadToken = reloadToken
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(reloadToken: reloadToken)
+    }
 
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView()
@@ -107,12 +128,16 @@ struct WebView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
-        // Only reload if the URL actually changed
+        // Reload for navigation changes, or explicit refresh requests.
         if nsView.url != url {
             let request = URLRequest(url: url)
             print("Loading URL: \(url)")
             nsView.load(request)
+        } else if context.coordinator.lastReloadToken != reloadToken {
+            nsView.reload()
         }
+
+        context.coordinator.lastReloadToken = reloadToken
     }
 }
 
@@ -150,6 +175,7 @@ struct ContentView: View {
 struct RemindersView: View {
     @State private var urlString = "https://www.google.com"
     @State private var currentURL: URL = URL(string: "https://www.google.com")!
+    @State private var webViewReloadToken = 0
     @State private var commandInput = ""
     @State private var showingCommandPanel = true
     @State private var errorMessage = ""
@@ -162,26 +188,7 @@ struct RemindersView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with URL bar
-            VStack(spacing: 12) {
-                HStack(spacing: 8) {
-                    StyledTextField(
-                        placeholder: "Enter URL",
-                        text: $urlString,
-                        onSubmit: navigateToURL
-                    )
-
-                    Button("Go") {
-                        navigateToURL()
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color(NSColor.controlBackgroundColor))
-
-            // Main content area with WebView, Command Panel, and Todo
+            // Main content area with Todo, WebView column, and command panel
             HStack(spacing: 0) {
                 if showingCommandPanel {
                     TodoView()
@@ -189,8 +196,28 @@ struct RemindersView: View {
                         .background(Color(NSColor.controlBackgroundColor))
                 }
 
-                WebView(url: currentURL)
-                    .background(Color.white)
+                VStack(spacing: 0) {
+                    // URL bar should only span the web column
+                    HStack(spacing: 8) {
+                        StyledTextField(
+                            placeholder: "Enter URL",
+                            text: $urlString,
+                            font: .body,
+                            onSubmit: navigateToURL
+                        )
+
+                        Button("Go") {
+                            navigateToURL()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(NSColor.controlBackgroundColor))
+
+                    WebView(url: currentURL, reloadToken: webViewReloadToken)
+                        .background(Color.white)
+                }
 
                 if showingCommandPanel {
                     commandPanel
@@ -201,12 +228,7 @@ struct RemindersView: View {
 
             // Bottom toolbar
             HStack {
-                Button("Refresh") {
-                    currentURL = currentURL
-                }
-                .buttonStyle(.borderless)
-
-                Button(showingCommandPanel ? "Hide Panel" : "Show Panel") {
+                Button(showingCommandPanel ? "Hide Panel" : "Show Panels") {
                     showingCommandPanel.toggle()
                 }
                 .buttonStyle(.borderless)
@@ -234,20 +256,11 @@ struct RemindersView: View {
             HStack {
                 Text("Command Panel")
                     .font(.headline)
-                    .padding(.leading)
 
                 Spacer()
-
-                Button(action: {
-                    showingCommandPanel.toggle()
-                }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing)
             }
-            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(Color(NSColor.separatorColor).opacity(0.1))
 
             // Command area
@@ -405,11 +418,32 @@ struct RemindersView: View {
     }
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if let error = error {
-                print("Notification permission error: \(error)")
-            } else {
-                print("Notification permission granted: \(granted)")
+        ensureNotificationPermission { _ in }
+    }
+
+    private func ensureNotificationPermission(completion: @escaping (Bool) -> Void) {
+        let center = UNUserNotificationCenter.current()
+
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                completion(true)
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    if let error = error {
+                        print("Notification permission error: \(error)")
+                    } else {
+                        print("Notification permission granted: \(granted)")
+                    }
+                    completion(granted)
+                }
+            case .denied:
+                DispatchQueue.main.async {
+                    self.errorMessage = "Notifications are disabled for Focus. Enable notifications in System Settings to use timer/notif commands."
+                }
+                completion(false)
+            @unknown default:
+                completion(false)
             }
         }
     }
@@ -468,33 +502,30 @@ struct RemindersView: View {
     }
 
     private func showNotification(title: String, message: String) {
-        print("Showing notification - Title: '\(title)', Message: '\(message)'")
+        ensureNotificationPermission { granted in
+            guard granted else {
+                return
+            }
 
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = message
-        content.sound = UNNotificationSound.default
+            print("Showing notification - Title: '\(title)', Message: '\(message)'")
 
-//        // Also play a system alert sound as backup
-//        DispatchQueue.main.async {
-//            if let alertSound = NSSound(named: "Ping") {
-//                alertSound.play()
-//            } else {
-//                NSSound.beep() // Fallback if Ping isn't available
-//            }
-//        }
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = message
+            content.sound = UNNotificationSound.default
 
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
 
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Notification error: \(error)")
-            } else {
-                print("Notification added successfully")
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("Notification error: \(error)")
+                } else {
+                    print("Notification added successfully")
+                }
             }
         }
     }
@@ -584,6 +615,11 @@ struct RemindersView: View {
     }
 
     private func scheduleTimer(timeInterval: TimeInterval, originalInput: String, message: String?) {
+        guard timeInterval >= 1 else {
+            errorMessage = "Timer must be at least 1 second"
+            return
+        }
+
         let timerId = UUID().uuidString
         let content = UNMutableNotificationContent()
         content.title = "Timer"
@@ -602,19 +638,30 @@ struct RemindersView: View {
             trigger: trigger
         )
 
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to schedule timer: \(error.localizedDescription)"
+        ensureNotificationPermission { granted in
+            guard granted else {
+                return
+            }
+
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    DispatchQueue.main.async {
+                        let nsError = error as NSError
+                        if nsError.domain == UNErrorDomain && nsError.code == UNError.Code.notificationsNotAllowed.rawValue {
+                            self.errorMessage = "Notifications are disabled for Focus. Enable notifications in System Settings to use timers."
+                        } else {
+                            self.errorMessage = "Failed to schedule timer: \(error.localizedDescription)"
+                        }
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        let endTime = Date().addingTimeInterval(timeInterval)
+                        let activeTimer = ActiveTimer(id: timerId, originalInput: originalInput, endTime: endTime, message: message)
+                        self.activeTimers.append(activeTimer)
+                        self.savePersistedState()
+                    }
+                    print("Timer scheduled for \(timeInterval) seconds")
                 }
-            } else {
-                DispatchQueue.main.async {
-                    let endTime = Date().addingTimeInterval(timeInterval)
-                    let activeTimer = ActiveTimer(id: timerId, originalInput: originalInput, endTime: endTime, message: message)
-                    self.activeTimers.append(activeTimer)
-                    self.savePersistedState()
-                }
-                print("Timer scheduled for \(timeInterval) seconds")
             }
         }
     }
@@ -717,7 +764,11 @@ struct RemindersView: View {
         }
 
         if let url = URL(string: processedURL) {
-            currentURL = url
+            if currentURL.absoluteString == url.absoluteString {
+                webViewReloadToken += 1
+            } else {
+                currentURL = url
+            }
         }
         savePersistedState()
     }
