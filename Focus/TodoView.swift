@@ -185,6 +185,7 @@ struct TodoView: View {
                 }
                 .background(Color(NSColor.textBackgroundColor))
                 .focusable()
+                .focusEffectDisabled()
                 .focused($previewFocused)
                 .onAppear {
                     previewFocused = true
