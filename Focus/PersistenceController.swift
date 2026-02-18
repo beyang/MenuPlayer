@@ -38,16 +38,19 @@ final class PersistenceController {
 
     // URL state now uses UserDefaults for simplicity
     @MainActor
-    func saveURLState(urlString: String, currentURL: String) {
+    func saveURLState(urlString: String, currentURL: String, webVolume: Double) {
         UserDefaults.standard.set(urlString, forKey: "Focus.urlString")
         UserDefaults.standard.set(currentURL, forKey: "Focus.currentURL")
+        UserDefaults.standard.set(webVolume, forKey: "Focus.webVolume")
     }
 
     @MainActor
-    func loadURLState() -> (urlString: String, currentURL: String) {
+    func loadURLState() -> (urlString: String, currentURL: String, webVolume: Double) {
         let urlString = UserDefaults.standard.string(forKey: "Focus.urlString") ?? "https://www.google.com"
         let currentURL = UserDefaults.standard.string(forKey: "Focus.currentURL") ?? "https://www.google.com"
-        return (urlString, currentURL)
+        let webVolume = UserDefaults.standard.object(forKey: "Focus.webVolume") as? Double ?? 1.0
+        let normalizedWebVolume = min(max(webVolume, 0), 1)
+        return (urlString, currentURL, normalizedWebVolume)
     }
 
     func saveTimers(_ timers: [ActiveTimer]) {

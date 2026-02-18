@@ -106,21 +106,31 @@ struct StyledTextField: View {
 struct WebView: NSViewRepresentable {
     let url: URL
     let reloadToken: Int
+    let volume: Double
 
-    class Coordinator {
+    class Coordinator: NSObject, WKNavigationDelegate {
         var lastReloadToken: Int
+        var lastVolume: Double
+        var lastRequestedURL: URL
 
-        init(reloadToken: Int) {
+        init(reloadToken: Int, volume: Double, url: URL) {
             self.lastReloadToken = reloadToken
+            self.lastVolume = volume
+            self.lastRequestedURL = url
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            WebView.applyVolume(lastVolume, to: webView)
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(reloadToken: reloadToken)
+        Coordinator(reloadToken: reloadToken, volume: volume, url: url)
     }
 
     func makeNSView(context: Context) -> WKWebView {
         let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
         print("WebView created")
         let request = URLRequest(url: url)
         webView.load(request)
@@ -129,7 +139,7 @@ struct WebView: NSViewRepresentable {
 
     func updateNSView(_ nsView: WKWebView, context: Context) {
         // Reload for navigation changes, or explicit refresh requests.
-        if nsView.url != url {
+        if context.coordinator.lastRequestedURL != url {
             let request = URLRequest(url: url)
             print("Loading URL: \(url)")
             nsView.load(request)
@@ -137,7 +147,68 @@ struct WebView: NSViewRepresentable {
             nsView.reload()
         }
 
+        if context.coordinator.lastVolume != volume {
+            Self.applyVolume(volume, to: nsView)
+        }
+
         context.coordinator.lastReloadToken = reloadToken
+        context.coordinator.lastVolume = volume
+        context.coordinator.lastRequestedURL = url
+    }
+
+    private static func applyVolume(_ volume: Double, to webView: WKWebView) {
+        let normalizedVolume = min(max(volume, 0), 1)
+        let volumeString = String(format: "%.3f", normalizedVolume)
+
+        let script = """
+        (function() {
+            const targetVolume = \(volumeString);
+            window.__focusTargetVolume = targetVolume;
+
+            const applyVolume = (mediaElement) => {
+                if (!mediaElement || typeof mediaElement.volume !== 'number') {
+                    return;
+                }
+                mediaElement.volume = targetVolume;
+            };
+
+            document.querySelectorAll('audio, video').forEach(applyVolume);
+
+            if (!window.__focusVolumeHooksInstalled) {
+                document.addEventListener('play', function(event) {
+                    const mediaElement = event.target;
+                    if (mediaElement && (mediaElement.tagName === 'AUDIO' || mediaElement.tagName === 'VIDEO')) {
+                        const currentVolume = typeof window.__focusTargetVolume === 'number' ? window.__focusTargetVolume : targetVolume;
+                        mediaElement.volume = currentVolume;
+                    }
+                }, true);
+
+                const observer = new MutationObserver(function(mutations) {
+                    const currentVolume = typeof window.__focusTargetVolume === 'number' ? window.__focusTargetVolume : targetVolume;
+                    mutations.forEach(function(mutation) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+                                return;
+                            }
+                            if (node.matches && (node.matches('audio') || node.matches('video'))) {
+                                node.volume = currentVolume;
+                            }
+                            if (node.querySelectorAll) {
+                                node.querySelectorAll('audio, video').forEach(function(mediaElement) {
+                                    mediaElement.volume = currentVolume;
+                                });
+                            }
+                        });
+                    });
+                });
+
+                observer.observe(document.documentElement, { childList: true, subtree: true });
+                window.__focusVolumeHooksInstalled = true;
+            }
+        })();
+        """
+
+        webView.evaluateJavaScript(script)
     }
 }
 
@@ -183,6 +254,7 @@ struct RemindersView: View {
     @State private var focusItems: [FocusItem] = []
     @State private var timerUpdateTimer: Foundation.Timer?
     @State private var uiRefreshTrigger = false
+    @State private var webVolume = 1.0
 
     let persistenceController = PersistenceController.shared
 
@@ -210,12 +282,22 @@ struct RemindersView: View {
                             navigateToURL()
                         }
                         .buttonStyle(.borderedProminent)
+
+                        Image(systemName: "speaker.wave.2.fill")
+                            .foregroundStyle(.secondary)
+
+                        Slider(value: $webVolume, in: 0...1, step: 0.01)
+                            .frame(width: 140)
+
+                        Text("\(Int(webVolume * 100))%")
+                            .font(.system(.caption, design: .monospaced))
+                            .frame(width: 40, alignment: .trailing)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(Color(NSColor.controlBackgroundColor))
 
-                    WebView(url: currentURL, reloadToken: webViewReloadToken)
+                    WebView(url: currentURL, reloadToken: webViewReloadToken, volume: webVolume)
                         .background(Color.white)
                 }
 
@@ -247,6 +329,9 @@ struct RemindersView: View {
         .onDisappear {
             timerUpdateTimer?.invalidate()
             savePersistedState()
+        }
+        .onChange(of: webVolume) {
+            saveURLStateOnly()
         }
     }
 
@@ -770,7 +855,7 @@ struct RemindersView: View {
                 currentURL = url
             }
         }
-        savePersistedState()
+        saveURLStateOnly()
     }
 
     private func loadPersistedState() {
@@ -779,12 +864,17 @@ struct RemindersView: View {
         if let url = URL(string: state.currentURL) {
             currentURL = url
         }
+        webVolume = state.webVolume
         activeTimers = persistenceController.loadTimers()
     }
 
     private func savePersistedState() {
-        persistenceController.saveURLState(urlString: urlString, currentURL: currentURL.absoluteString)
+        saveURLStateOnly()
         persistenceController.saveTimers(activeTimers)
+    }
+
+    private func saveURLStateOnly() {
+        persistenceController.saveURLState(urlString: urlString, currentURL: currentURL.absoluteString, webVolume: webVolume)
     }
 }
 
