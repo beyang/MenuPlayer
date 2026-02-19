@@ -545,7 +545,9 @@ struct MarkdownElement: Identifiable {
                 ForEach(content.components(separatedBy: "\n"), id: \.self) { item in
                     HStack(alignment: .top, spacing: 4) {
                         Text("•")
-                        Text(cleanListItem(item))
+                        // Use the same markdown-capable text renderer as paragraphs so
+                        // `[label](url)` links in list items become clickable.
+                        MarkdownTextView(text: cleanListItem(item))
                     }
                 }
             }
