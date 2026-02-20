@@ -9,6 +9,7 @@ import SwiftUI
 import AppKit
 import CoreData
 import Carbon.HIToolbox
+import UserNotifications
 
 final class SpotlightPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -38,9 +39,12 @@ struct SpotlightInputView: View {
                 )
                 .focused($isFocused)
                 .onSubmit {
-                    onSubmit(query)
+                    let submittedQuery = query
+                    query = ""
+                    onSubmit(submittedQuery)
                 }
                 .onKeyPress(.escape) {
+                    query = ""
                     onCancel()
                     return .handled
                 }
@@ -54,19 +58,137 @@ struct SpotlightInputView: View {
                 .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
         )
         .onAppear {
-            isFocused = true
+            DispatchQueue.main.async {
+                isFocused = true
+            }
         }
+    }
+}
+
+struct SpotlightCommand {
+    let name: String
+    let aliases: [String]
+    let action: () -> Void
+
+    var searchableTerms: [String] {
+        [name] + aliases
+    }
+}
+
+final class CommandRegistry {
+    private var commands: [SpotlightCommand] = []
+
+    func register(_ command: SpotlightCommand) {
+        commands.append(command)
+    }
+
+    func executeBestMatch(for input: String) -> Bool {
+        guard let bestCommand = bestMatch(for: input) else {
+            return false
+        }
+        bestCommand.action()
+        return true
+    }
+
+    private func bestMatch(for input: String) -> SpotlightCommand? {
+        let query = normalize(input)
+        guard !query.isEmpty else {
+            return nil
+        }
+
+        var bestCommand: SpotlightCommand?
+        var bestScore = Int.min
+
+        for command in commands {
+            let commandScore = command.searchableTerms
+                .compactMap { fuzzyScore(query: query, candidate: normalize($0)) }
+                .max() ?? Int.min
+
+            if commandScore > bestScore {
+                bestScore = commandScore
+                bestCommand = command
+            }
+        }
+
+        return bestScore > 0 ? bestCommand : nil
+    }
+
+    private func normalize(_ input: String) -> String {
+        input
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+    }
+
+    // Subsequence matcher with bonuses for contiguous and word-start matches.
+    private func fuzzyScore(query: String, candidate: String) -> Int? {
+        guard !query.isEmpty, !candidate.isEmpty else {
+            return nil
+        }
+
+        let queryChars = Array(query)
+        let candidateChars = Array(candidate)
+
+        var queryIndex = 0
+        var candidateIndex = 0
+        var score = 0
+        var previousMatchIndex: Int?
+
+        while queryIndex < queryChars.count {
+            let target = queryChars[queryIndex]
+            var foundIndex: Int?
+
+            while candidateIndex < candidateChars.count {
+                if candidateChars[candidateIndex] == target {
+                    foundIndex = candidateIndex
+                    candidateIndex += 1
+                    break
+                }
+                candidateIndex += 1
+            }
+
+            guard let matchIndex = foundIndex else {
+                return nil
+            }
+
+            score += 10
+
+            if let previousMatchIndex {
+                if matchIndex == previousMatchIndex + 1 {
+                    score += 7
+                } else {
+                    score -= (matchIndex - previousMatchIndex - 1)
+                }
+            }
+
+            if matchIndex == 0 {
+                score += 6
+            } else {
+                let previousChar = candidateChars[matchIndex - 1]
+                if previousChar == " " || previousChar == "-" || previousChar == "_" {
+                    score += 4
+                }
+            }
+
+            previousMatchIndex = matchIndex
+            queryIndex += 1
+        }
+
+        score -= max(0, candidateChars.count - queryChars.count)
+        return score
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var hotKeyRef: EventHotKeyRef?
     private var spotlightPanel: SpotlightPanel?
+    private let commandRegistry = CommandRegistry()
     static var shared: AppDelegate?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         AppDelegate.shared = self
+        registerCommands()
+        requestNotificationPermission()
         registerGlobalHotKey()
     }
 
@@ -132,7 +254,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let rootView = SpotlightInputView(
             onSubmit: { value in
-                print("[Focus] Spotlight query: \(value)")
+                let query = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !query.isEmpty else {
+                    panel.orderOut(nil)
+                    return
+                }
+
+                let didExecute = self.commandRegistry.executeBestMatch(for: query)
+                if !didExecute {
+                    NSSound.beep()
+                }
                 panel.orderOut(nil)
             },
             onCancel: {
@@ -156,6 +287,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             y: frame.midY - panelSize.height / 2
         )
         panel.setFrameOrigin(origin)
+    }
+
+    private func registerCommands() {
+        commandRegistry.register(
+            SpotlightCommand(
+                name: "show notification",
+                aliases: ["show notif", "notification", "this is a notif"],
+                action: { [weak self] in
+                    self?.showNotification(message: "this is a notif")
+                }
+            )
+        )
+    }
+
+    private func requestNotificationPermission() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error {
+                print("[Focus] Notification permission error: \(error)")
+                return
+            }
+            print("[Focus] Notification permission granted: \(granted)")
+        }
+    }
+
+    private func showNotification(message: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "Focus"
+        content.body = message
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                print("[Focus] Failed to post notification: \(error)")
+            }
+        }
     }
 }
 
