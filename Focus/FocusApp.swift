@@ -10,14 +10,70 @@ import AppKit
 import CoreData
 import Carbon.HIToolbox
 
+final class SpotlightPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
+
+struct SpotlightInputView: View {
+    @State private var query = ""
+    @FocusState private var isFocused: Bool
+    let onSubmit: (String) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("Focus")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            TextField("Type a command...", text: $query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 24, weight: .medium, design: .rounded))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color(nsColor: .windowBackgroundColor).opacity(0.9))
+                )
+                .focused($isFocused)
+                .onSubmit {
+                    onSubmit(query)
+                }
+                .onKeyPress(.escape) {
+                    onCancel()
+                    return .handled
+                }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+        )
+        .onAppear {
+            isFocused = true
+        }
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     var hotKeyRef: EventHotKeyRef?
+    private var spotlightPanel: SpotlightPanel?
     static var shared: AppDelegate?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         AppDelegate.shared = self
         registerGlobalHotKey()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+        }
     }
     
     func registerGlobalHotKey() {
@@ -30,7 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let handler: EventHandlerUPP = { _, event, _ -> OSStatus in
             print("[Focus] Hotkey pressed!")
             DispatchQueue.main.async {
-                AppDelegate.shared?.toggleMenuBarWindow()
+                AppDelegate.shared?.toggleSpotlightInput()
             }
             return noErr
         }
@@ -38,37 +94,68 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let installStatus = InstallEventHandler(GetApplicationEventTarget(), handler, 1, &eventType, nil, nil)
         print("[Focus] InstallEventHandler status: \(installStatus)")
         
-        // Cmd+Shift+Space: kVK_Space = 49, cmdKey = 256, shiftKey = 512
-        let modifiers: UInt32 = UInt32(cmdKey | shiftKey)
+        // Ctrl+Shift+Space: kVK_Space = 49, controlKey = 4096, shiftKey = 512
+        let modifiers: UInt32 = UInt32(controlKey | shiftKey)
         let registerStatus = RegisterEventHotKey(UInt32(kVK_Space), modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
         print("[Focus] RegisterEventHotKey status: \(registerStatus), hotKeyRef: \(String(describing: hotKeyRef))")
     }
     
-    func toggleMenuBarWindow() {
-        // Find the status item button and simulate a click
-        if let button = NSApp.windows
-            .compactMap({ $0.value(forKey: "statusItem") as? NSStatusItem })
-            .first?.button {
-            button.performClick(nil)
-        } else {
-            // Fallback: post a click event to the menu bar area
-            NSApp.activate(ignoringOtherApps: true)
-            // Try to find and click the status bar button via accessibility
-            for window in NSApp.windows {
-                if window.className.contains("NSStatusBarWindow") {
-                    if let contentView = window.contentView {
-                        let point = NSPoint(x: contentView.bounds.midX, y: contentView.bounds.midY)
-                        let mouseDown = NSEvent.mouseEvent(with: .leftMouseDown, location: window.convertPoint(toScreen: point), modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1.0)
-                        let mouseUp = NSEvent.mouseEvent(with: .leftMouseUp, location: window.convertPoint(toScreen: point), modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1.0)
-                        if let down = mouseDown, let up = mouseUp {
-                            NSApp.sendEvent(down)
-                            NSApp.sendEvent(up)
-                        }
-                    }
-                    break
-                }
-            }
+    func toggleSpotlightInput() {
+        if let spotlightPanel, spotlightPanel.isVisible {
+            spotlightPanel.orderOut(nil)
+            return
         }
+
+        let panel = spotlightPanel ?? makeSpotlightPanel()
+        spotlightPanel = panel
+
+        positionSpotlightPanel(panel)
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
+    }
+
+    private func makeSpotlightPanel() -> SpotlightPanel {
+        let panel = SpotlightPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 160),
+            styleMask: [.nonactivatingPanel, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isFloatingPanel = true
+        panel.level = .statusBar
+        panel.hidesOnDeactivate = false
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+
+        let rootView = SpotlightInputView(
+            onSubmit: { value in
+                print("[Focus] Spotlight query: \(value)")
+                panel.orderOut(nil)
+            },
+            onCancel: {
+                panel.orderOut(nil)
+            }
+        )
+
+        panel.contentView = NSHostingView(rootView: rootView)
+        return panel
+    }
+
+    private func positionSpotlightPanel(_ panel: NSPanel) {
+        guard let screen = NSScreen.main ?? NSApplication.shared.keyWindow?.screen ?? NSScreen.screens.first else {
+            return
+        }
+
+        let frame = screen.visibleFrame
+        let panelSize = panel.frame.size
+        let origin = NSPoint(
+            x: frame.midX - panelSize.width / 2,
+            y: frame.midY - panelSize.height / 2
+        )
+        panel.setFrameOrigin(origin)
     }
 }
 
