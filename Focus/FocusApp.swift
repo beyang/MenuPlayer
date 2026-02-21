@@ -433,7 +433,7 @@ struct FocusApp: App {
     let persistenceController = PersistenceController.shared
 
     var body: some Scene {
-        MenuBarExtra("Focus", systemImage: "play.fill") {
+        MenuBarExtra("Focus", image: "MenuBarIcon") {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
