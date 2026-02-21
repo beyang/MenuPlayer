@@ -547,7 +547,7 @@ struct RemindersView: View {
         if commandContent.hasPrefix("notif ") {
             let message = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
             if !message.isEmpty {
-                showNotification(title: "Focus", message: message)
+                showNotification(title: message, message: "Triggered from Focus command panel")
                 commandInput = ""
             } else {
                 errorMessage = "notif command requires a message"

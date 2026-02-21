@@ -18,9 +18,24 @@ final class SpotlightPanel: NSPanel {
 
 struct SpotlightInputView: View {
     @State private var query = ""
+    @State private var selectedIndex = 0
     @FocusState private var isFocused: Bool
-    let onSubmit: (String) -> Void
+    let commandSuggestions: (String) -> [SpotlightCommand]
+    let onSubmitSelection: (SpotlightCommand?) -> Void
     let onCancel: () -> Void
+
+    private var visibleCommands: [SpotlightCommand] {
+        commandSuggestions(query)
+    }
+
+    private var selectedCommand: SpotlightCommand? {
+        guard !visibleCommands.isEmpty else {
+            return nil
+        }
+
+        let safeIndex = min(max(selectedIndex, 0), visibleCommands.count - 1)
+        return visibleCommands[safeIndex]
+    }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -39,15 +54,55 @@ struct SpotlightInputView: View {
                 )
                 .focused($isFocused)
                 .onSubmit {
-                    let submittedQuery = query
+                    let commandToRun = selectedCommand
                     query = ""
-                    onSubmit(submittedQuery)
+                    selectedIndex = 0
+                    onSubmitSelection(commandToRun)
                 }
                 .onKeyPress(.escape) {
                     query = ""
+                    selectedIndex = 0
                     onCancel()
                     return .handled
                 }
+                .onKeyPress(.upArrow) {
+                    guard !visibleCommands.isEmpty else {
+                        return .handled
+                    }
+                    selectedIndex = max(selectedIndex - 1, 0)
+                    return .handled
+                }
+                .onKeyPress(.downArrow) {
+                    guard !visibleCommands.isEmpty else {
+                        return .handled
+                    }
+                    selectedIndex = min(selectedIndex + 1, visibleCommands.count - 1)
+                    return .handled
+                }
+                .onChange(of: query) {
+                    selectedIndex = 0
+                }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(visibleCommands.enumerated()), id: \.element.id) { index, command in
+                    Text(command.name)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(index == selectedIndex ? Color.white : Color.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            index == selectedIndex
+                                ? Color.accentColor.opacity(0.9)
+                                : Color(nsColor: .windowBackgroundColor).opacity(0.55)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .onTapGesture {
+                            selectedIndex = index
+                        }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -66,6 +121,7 @@ struct SpotlightInputView: View {
 }
 
 struct SpotlightCommand {
+    let id = UUID()
     let name: String
     let aliases: [String]
     let action: () -> Void
@@ -82,35 +138,36 @@ final class CommandRegistry {
         commands.append(command)
     }
 
-    func executeBestMatch(for input: String) -> Bool {
-        guard let bestCommand = bestMatch(for: input) else {
-            return false
+    func matchingCommands(for input: String) -> [SpotlightCommand] {
+        let query = normalize(input)
+
+        if query.isEmpty {
+            return commands
         }
-        bestCommand.action()
-        return true
+
+        return commands
+            .compactMap { command -> (command: SpotlightCommand, score: Int)? in
+                let bestScore = command.searchableTerms
+                    .compactMap { fuzzyScore(query: query, candidate: normalize($0)) }
+                    .max()
+
+                guard let bestScore, bestScore > 0 else {
+                    return nil
+                }
+
+                return (command, bestScore)
+            }
+            .sorted { lhs, rhs in
+                if lhs.score == rhs.score {
+                    return lhs.command.name < rhs.command.name
+                }
+                return lhs.score > rhs.score
+            }
+            .map(\.command)
     }
 
-    private func bestMatch(for input: String) -> SpotlightCommand? {
-        let query = normalize(input)
-        guard !query.isEmpty else {
-            return nil
-        }
-
-        var bestCommand: SpotlightCommand?
-        var bestScore = Int.min
-
-        for command in commands {
-            let commandScore = command.searchableTerms
-                .compactMap { fuzzyScore(query: query, candidate: normalize($0)) }
-                .max() ?? Int.min
-
-            if commandScore > bestScore {
-                bestScore = commandScore
-                bestCommand = command
-            }
-        }
-
-        return bestScore > 0 ? bestCommand : nil
+    func execute(_ command: SpotlightCommand) {
+        command.action()
     }
 
     private func normalize(_ input: String) -> String {
@@ -239,7 +296,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func makeSpotlightPanel() -> SpotlightPanel {
         let panel = SpotlightPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 160),
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 300),
             styleMask: [.nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -253,17 +310,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
 
         let rootView = SpotlightInputView(
-            onSubmit: { value in
-                let query = value.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !query.isEmpty else {
+            commandSuggestions: { query in
+                self.commandRegistry.matchingCommands(for: query)
+            },
+            onSubmitSelection: { selectedCommand in
+                guard let selectedCommand else {
+                    NSSound.beep()
                     panel.orderOut(nil)
                     return
                 }
 
-                let didExecute = self.commandRegistry.executeBestMatch(for: query)
-                if !didExecute {
-                    NSSound.beep()
-                }
+                self.commandRegistry.execute(selectedCommand)
                 panel.orderOut(nil)
             },
             onCancel: {
