@@ -356,6 +356,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             )
         )
+
+        commandRegistry.register(
+            SpotlightCommand(
+                name: "new chrome window",
+                aliases: ["chrome", "open chrome", "create chrome window", "google chrome"],
+                action: { [weak self] in
+                    self?.openGoogleChromeWindow()
+                }
+            )
+        )
     }
 
     private func requestNotificationPermission() {
@@ -384,6 +394,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         UNUserNotificationCenter.current().add(request) { error in
             if let error {
                 print("[Focus] Failed to post notification: \(error)")
+            }
+        }
+    }
+
+    private func openGoogleChromeWindow() {
+        let scriptSource = """
+        tell application "Google Chrome"
+            activate
+            make new window
+        end tell
+        """
+
+        var scriptError: NSDictionary?
+        let script = NSAppleScript(source: scriptSource)
+        script?.executeAndReturnError(&scriptError)
+
+        if let scriptError {
+            print("[Focus] Failed to create Chrome window via AppleScript: \(scriptError)")
+
+            let process = Process()
+            process.launchPath = "/usr/bin/open"
+            process.arguments = ["-a", "Google Chrome", "--args", "--new-window", "about:blank"]
+
+            do {
+                try process.run()
+            } catch {
+                print("[Focus] Failed to launch Google Chrome fallback: \(error)")
+                NSSound.beep()
             }
         }
     }
