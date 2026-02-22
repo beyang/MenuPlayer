@@ -105,7 +105,7 @@ final class PersistenceController {
                     return nil
                 }
                 return ActiveTimer(id: id, originalInput: originalInput, endTime: endTime, message: timer.message)
-            }.filter { !$0.isExpired }
+            }.filter { $0.endTime.timeIntervalSinceNow > 0 }
         } catch {
             print("Error loading timers: \(error)")
             #if DEBUG

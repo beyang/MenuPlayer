@@ -16,14 +16,6 @@ struct ActiveTimer: Identifiable {
     let originalInput: String
     let endTime: Date
     let message: String?
-
-    var remainingTime: TimeInterval {
-        endTime.timeIntervalSince(Date())
-    }
-
-    var isExpired: Bool {
-        remainingTime <= 0
-    }
 }
 
 struct StyledTextField: View {
@@ -211,8 +203,7 @@ struct RemindersView: View {
     @State private var showingCommandPanel = true
     @State private var errorMessage = ""
     @State private var activeTimers: [ActiveTimer] = []
-    @State private var timerUpdateTimer: Foundation.Timer?
-    @State private var uiRefreshTrigger = false
+    @State private var currentTime = Date()
     @State private var webVolume = 1.0
 
     let persistenceController = PersistenceController.shared
@@ -276,15 +267,17 @@ struct RemindersView: View {
         }
         .onAppear {
             requestNotificationPermission()
-            startTimerUpdateTimer()
             loadPersistedState()
         }
         .onDisappear {
-            timerUpdateTimer?.invalidate()
             savePersistedState()
         }
         .onChange(of: webVolume) {
             saveURLStateOnly()
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
+            currentTime = now
+            pruneExpiredTimers()
         }
     }
 
@@ -326,7 +319,7 @@ struct RemindersView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
 
-                    ForEach(activeTimers.sorted { $0.remainingTime < $1.remainingTime }) { timer in
+                    ForEach(activeTimers.sorted { remainingTime(for: $0) < remainingTime(for: $1) }) { timer in
                         VStack(alignment: .leading, spacing: 2) {
                             HStack {
                                 Text(timer.originalInput)
@@ -335,7 +328,7 @@ struct RemindersView: View {
 
                                 Spacer()
 
-                                Text(formatRemainingTime(timer.remainingTime))
+                                Text(formatRemainingTime(remainingTime(for: timer)))
                                     .font(.system(.caption, design: .monospaced))
                                     .foregroundStyle(.secondary)
 
@@ -655,23 +648,16 @@ struct RemindersView: View {
         }
     }
 
-    private func startTimerUpdateTimer() {
-        timerUpdateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            updateActiveTimers()
-        }
-    }
-
-    private func updateActiveTimers() {
+    private func pruneExpiredTimers() {
         let oldCount = activeTimers.count
-        activeTimers.removeAll { $0.isExpired }
+        activeTimers.removeAll { remainingTime(for: $0) <= 0 }
         if activeTimers.count != oldCount {
             savePersistedState()
         }
+    }
 
-        // Force UI refresh for countdown clock while timers are active.
-        if !activeTimers.isEmpty {
-            uiRefreshTrigger.toggle()
-        }
+    private func remainingTime(for timer: ActiveTimer) -> TimeInterval {
+        timer.endTime.timeIntervalSince(currentTime)
     }
 
     private func cancelTimer(_ timer: ActiveTimer) {
