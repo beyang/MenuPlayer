@@ -26,46 +26,6 @@ struct ActiveTimer: Identifiable {
     }
 }
 
-struct FocusItem: Identifiable {
-    let id: String
-    let description: String
-    let startTime: Date
-    var isActive: Bool
-    var totalElapsed: TimeInterval
-    private var lastResumeTime: Date?
-
-    init(id: String = UUID().uuidString, description: String) {
-        self.id = id
-        self.description = description
-        self.startTime = Date()
-        self.isActive = true
-        self.totalElapsed = 0
-        self.lastResumeTime = Date()
-    }
-
-    mutating func toggleActive() {
-        if isActive {
-            // Stopping - add elapsed time since last resume
-            if let lastResume = lastResumeTime {
-                totalElapsed += Date().timeIntervalSince(lastResume)
-            }
-            lastResumeTime = nil
-        } else {
-            // Starting - record resume time
-            lastResumeTime = Date()
-        }
-        isActive.toggle()
-    }
-
-    var currentElapsed: TimeInterval {
-        var elapsed = totalElapsed
-        if isActive, let lastResume = lastResumeTime {
-            elapsed += Date().timeIntervalSince(lastResume)
-        }
-        return elapsed
-    }
-}
-
 struct StyledTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -251,7 +211,6 @@ struct RemindersView: View {
     @State private var showingCommandPanel = true
     @State private var errorMessage = ""
     @State private var activeTimers: [ActiveTimer] = []
-    @State private var focusItems: [FocusItem] = []
     @State private var timerUpdateTimer: Foundation.Timer?
     @State private var uiRefreshTrigger = false
     @State private var webVolume = 1.0
@@ -333,7 +292,7 @@ struct RemindersView: View {
         VStack(spacing: 0) {
             // Command panel header
             HStack {
-                Text("Command Panel")
+                Text("Timers")
                     .font(.headline)
 
                 Spacer()
@@ -355,64 +314,9 @@ struct RemindersView: View {
                 Text("timer <time> [message] - Set timer (5s, 5h, 8:00, 16:00, 5pm, 4:30pm)")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
-
-                Text("focus <description> - Start focus session")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.secondary)
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Focus items section
-            if !focusItems.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Focus Sessions:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal)
-
-                    ForEach(focusItems) { focus in
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack {
-                                Text(focus.description)
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(.primary)
-
-                                Spacer()
-
-                                Text(formatElapsedTime(focus.currentElapsed))
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-
-                                Button(action: {
-                                    toggleFocus(focus)
-                                }) {
-                                    Image(systemName: focus.isActive ? "pause.fill" : "play.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .frame(width: 16, height: 16)
-
-                                Button(action: {
-                                    removeFocus(focus)
-                                }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .frame(width: 16, height: 16)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 2)
-                        .background(focus.isActive ? Color.blue.opacity(0.1) : Color.clear)
-                        .cornerRadius(4)
-                    }
-                }
-                .padding(.bottom, 8)
-            }
 
             // Active timers section
             if !activeTimers.isEmpty {
@@ -575,14 +479,6 @@ struct RemindersView: View {
                 }
             } else {
                 errorMessage = "timer command requires a time specification"
-            }
-        } else if commandContent.hasPrefix("focus ") {
-            let focusDescription = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !focusDescription.isEmpty {
-                addFocusItem(description: focusDescription)
-                commandInput = ""
-            } else {
-                errorMessage = "focus command requires a description"
             }
         } else {
             let unknownCmd = commandContent.split(separator: " ").first ?? ""
@@ -772,8 +668,8 @@ struct RemindersView: View {
             savePersistedState()
         }
 
-        // Force UI refresh for focus item clocks when there are active items
-        if !activeTimers.isEmpty || focusItems.contains(where: { $0.isActive }) {
+        // Force UI refresh for countdown clock while timers are active.
+        if !activeTimers.isEmpty {
             uiRefreshTrigger.toggle()
         }
     }
@@ -799,50 +695,6 @@ struct RemindersView: View {
         } else {
             return String(format: "%02d:%02d", minutes, seconds)
         }
-    }
-
-    private func formatElapsedTime(_ timeInterval: TimeInterval) -> String {
-        let totalSeconds = Int(timeInterval)
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let seconds = totalSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            return String(format: "%02d:%02d", minutes, seconds)
-        }
-    }
-
-    private func addFocusItem(description: String) {
-        // Stop all other active focus items
-        for index in focusItems.indices {
-            if focusItems[index].isActive {
-                focusItems[index].toggleActive()
-            }
-        }
-
-        // Add new focus item (it starts active by default)
-        let newFocus = FocusItem(description: description)
-        focusItems.insert(newFocus, at: 0)
-    }
-
-    private func toggleFocus(_ focus: FocusItem) {
-        if let index = focusItems.firstIndex(where: { $0.id == focus.id }) {
-            // If starting this focus, stop all others first
-            if !focusItems[index].isActive {
-                for otherIndex in focusItems.indices where otherIndex != index {
-                    if focusItems[otherIndex].isActive {
-                        focusItems[otherIndex].toggleActive()
-                    }
-                }
-            }
-            focusItems[index].toggleActive()
-        }
-    }
-
-    private func removeFocus(_ focus: FocusItem) {
-        focusItems.removeAll { $0.id == focus.id }
     }
 
     private func navigateToURL() {
