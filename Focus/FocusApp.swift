@@ -15,111 +15,7 @@ final class SpotlightPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-struct SpotlightInputView: View {
-    @State private var query = ""
-    @State private var selectedIndex = 0
-    @FocusState private var isFocused: Bool
-    let commandSuggestions: (String) -> [SpotlightCommand]
-    let onSubmitSelection: (SpotlightCommand?) -> Void
-    let onCancel: () -> Void
-
-    private var visibleCommands: [SpotlightCommand] {
-        commandSuggestions(query)
-    }
-
-    private var selectedCommand: SpotlightCommand? {
-        guard !visibleCommands.isEmpty else {
-            return nil
-        }
-
-        let safeIndex = min(max(selectedIndex, 0), visibleCommands.count - 1)
-        return visibleCommands[safeIndex]
-    }
-
-    var body: some View {
-        VStack(spacing: 14) {
-            Text("Focus")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            TextField("Type a command...", text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 24, weight: .medium, design: .rounded))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color(nsColor: .windowBackgroundColor).opacity(0.9))
-                )
-                .focused($isFocused)
-                .onSubmit {
-                    let commandToRun = selectedCommand
-                    query = ""
-                    selectedIndex = 0
-                    onSubmitSelection(commandToRun)
-                }
-                .onKeyPress(.escape) {
-                    query = ""
-                    selectedIndex = 0
-                    onCancel()
-                    return .handled
-                }
-                .onKeyPress(.upArrow) {
-                    guard !visibleCommands.isEmpty else {
-                        return .handled
-                    }
-                    selectedIndex = max(selectedIndex - 1, 0)
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    guard !visibleCommands.isEmpty else {
-                        return .handled
-                    }
-                    selectedIndex = min(selectedIndex + 1, visibleCommands.count - 1)
-                    return .handled
-                }
-                .onChange(of: query) {
-                    selectedIndex = 0
-                }
-
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(visibleCommands.enumerated()), id: \.element.id) { index, command in
-                    Text(command.name)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(index == selectedIndex ? Color.white : Color.primary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            index == selectedIndex
-                                ? Color.accentColor.opacity(0.9)
-                                : Color(nsColor: .windowBackgroundColor).opacity(0.55)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .onTapGesture {
-                            selectedIndex = index
-                        }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
-        )
-        .onAppear {
-            DispatchQueue.main.async {
-                isFocused = true
-            }
-        }
-    }
-}
-
-struct SpotlightCommand {
+struct SpotlightCommand: Identifiable {
     let id = UUID()
     let name: String
     let aliases: [String]
@@ -137,15 +33,18 @@ final class CommandRegistry {
         commands.append(command)
     }
 
+    func execute(_ command: SpotlightCommand) {
+        command.action()
+    }
+
     func matchingCommands(for input: String) -> [SpotlightCommand] {
         let query = normalize(input)
-
         if query.isEmpty {
             return commands
         }
 
         return commands
-            .compactMap { command -> (command: SpotlightCommand, score: Int)? in
+            .compactMap { command -> (SpotlightCommand, Int)? in
                 let bestScore = command.searchableTerms
                     .compactMap { fuzzyScore(query: query, candidate: normalize($0)) }
                     .max()
@@ -157,25 +56,15 @@ final class CommandRegistry {
                 return (command, bestScore)
             }
             .sorted { lhs, rhs in
-                if lhs.score == rhs.score {
-                    return lhs.command.name < rhs.command.name
-                }
-                return lhs.score > rhs.score
+                lhs.1 == rhs.1 ? lhs.0.name < rhs.0.name : lhs.1 > rhs.1
             }
-            .map(\.command)
-    }
-
-    func execute(_ command: SpotlightCommand) {
-        command.action()
+            .map(\.0)
     }
 
     private func normalize(_ input: String) -> String {
-        input
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    // Subsequence matcher with bonuses for contiguous and word-start matches.
     private func fuzzyScore(query: String, candidate: String) -> Int? {
         guard !query.isEmpty, !candidate.isEmpty else {
             return nil
@@ -183,7 +72,6 @@ final class CommandRegistry {
 
         let queryChars = Array(query)
         let candidateChars = Array(candidate)
-
         var queryIndex = 0
         var candidateIndex = 0
         var score = 0
@@ -234,12 +122,95 @@ final class CommandRegistry {
     }
 }
 
+struct SpotlightPanelContentView: View {
+    @State private var query = ""
+    @State private var selectedIndex = 0
+    @FocusState private var commandFieldFocused: Bool
+
+    let commandSuggestions: (String) -> [SpotlightCommand]
+    let onSubmitSelection: (SpotlightCommand?) -> Void
+
+    private var visibleCommands: [SpotlightCommand] {
+        commandSuggestions(query)
+    }
+
+    private var selectedCommand: SpotlightCommand? {
+        guard !visibleCommands.isEmpty else { return nil }
+        let safeIndex = min(max(selectedIndex, 0), visibleCommands.count - 1)
+        return visibleCommands[safeIndex]
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Type a command...", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.black.opacity(0.08))
+                    )
+                    .focused($commandFieldFocused)
+                    .onSubmit {
+                        onSubmitSelection(selectedCommand)
+                        query = ""
+                        selectedIndex = 0
+                    }
+                    .onChange(of: query) {
+                        selectedIndex = 0
+                    }
+                    .onKeyPress(.upArrow) {
+                        guard !visibleCommands.isEmpty else { return .handled }
+                        selectedIndex = max(selectedIndex - 1, 0)
+                        return .handled
+                    }
+                    .onKeyPress(.downArrow) {
+                        guard !visibleCommands.isEmpty else { return .handled }
+                        selectedIndex = min(selectedIndex + 1, visibleCommands.count - 1)
+                        return .handled
+                    }
+
+                if !visibleCommands.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(visibleCommands.prefix(6).enumerated()), id: \.element.id) { index, command in
+                            Text(command.name)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(index == selectedIndex ? Color.white : Color.primary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(index == selectedIndex ? Color.accentColor : Color.black.opacity(0.05))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .onTapGesture {
+                                    selectedIndex = index
+                                    onSubmitSelection(command)
+                                    query = ""
+                                }
+                        }
+                    }
+                }
+            }
+            .padding(12)
+
+            Divider()
+
+            ContentView()
+        }
+        .onAppear {
+            commandFieldFocused = true
+        }
+    }
+}
+
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var hotKeyRef: EventHotKeyRef?
     private var spotlightPanel: SpotlightPanel?
     private let commandRegistry = CommandRegistry()
     static var shared: AppDelegate?
-    
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         AppDelegate.shared = self
@@ -283,6 +254,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        showSpotlightInput()
+    }
+
+    func showSpotlightInput() {
         let panel = spotlightPanel ?? makeSpotlightPanel()
         spotlightPanel = panel
 
@@ -294,38 +269,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func makeSpotlightPanel() -> SpotlightPanel {
         let panel = SpotlightPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 300),
-            styleMask: [.nonactivatingPanel, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 1400, height: 1000),
+            styleMask: [.titled, .fullSizeContentView, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
+        panel.isOpaque = true
+        panel.backgroundColor = .windowBackgroundColor
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+        panel.title = "Focus"
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isMovableByWindowBackground = true
 
-        let rootView = SpotlightInputView(
-            commandSuggestions: { query in
-                self.commandRegistry.matchingCommands(for: query)
+        let rootView = SpotlightPanelContentView(
+            commandSuggestions: { [commandRegistry] input in
+                commandRegistry.matchingCommands(for: input)
             },
-            onSubmitSelection: { selectedCommand in
-                guard let selectedCommand else {
+            onSubmitSelection: { [weak self] selectedCommand in
+                guard let self, let selectedCommand else {
                     NSSound.beep()
-                    panel.orderOut(nil)
                     return
                 }
 
                 self.commandRegistry.execute(selectedCommand)
-                panel.orderOut(nil)
-            },
-            onCancel: {
-                panel.orderOut(nil)
+                self.spotlightPanel?.orderOut(nil)
             }
         )
-
+            .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
         panel.contentView = NSHostingView(rootView: rootView)
         return panel
     }
@@ -366,7 +341,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let bundleID = "com.google.Chrome"
 
-        // Find or launch Chrome
         let chrome = NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == bundleID }
         if chrome == nil {
             NSWorkspace.shared.launchApplication("Google Chrome")
@@ -392,7 +366,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let pid = chrome.processIdentifier
         let appElement = AXUIElementCreateApplication(pid)
 
-        // Get the menu bar
         var menuBarRef: CFTypeRef?
         let menuBarResult = AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef)
         guard menuBarResult == .success else {
@@ -408,7 +381,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Walk the menu path: File → New Window
         let menuBar = menuBarRef as! AXUIElement
         guard let menuItem = findMenuItemByPath(in: menuBar, path: ["File", "New Window"]) else {
             NSSound.beep()
@@ -466,12 +438,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct FocusApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    let persistenceController = PersistenceController.shared
 
     var body: some Scene {
         MenuBarExtra("Focus", image: "MenuBarIcon") {
-            ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            VStack(alignment: .leading, spacing: 8) {
+                Button("Open Focus Panel") {
+                    appDelegate.showSpotlightInput()
+                }
+
+                Divider()
+
+                Button("Quit Focus") {
+                    NSApplication.shared.terminate(nil)
+                }
+            }
+            .padding(12)
+            .frame(minWidth: 180)
         }
         .menuBarExtraStyle(.window)
     }
