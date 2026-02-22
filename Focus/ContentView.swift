@@ -260,14 +260,8 @@ struct RemindersView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Main content area with Todo, WebView column, and command panel
+            // Main content area with WebView column and right sidebar
             HStack(spacing: 0) {
-                if showingCommandPanel {
-                    TodoView()
-                        .frame(width: 450)
-                        .background(Color(NSColor.controlBackgroundColor))
-                }
-
                 VStack(spacing: 0) {
                     // URL bar should only span the web column
                     HStack(spacing: 8) {
@@ -302,8 +296,8 @@ struct RemindersView: View {
                 }
 
                 if showingCommandPanel {
-                    commandPanel
-                        .frame(width: 300)
+                    rightSidebar
+                        .frame(width: 450)
                         .background(Color(NSColor.controlBackgroundColor))
                 }
             }
@@ -499,6 +493,20 @@ struct RemindersView: View {
                 }
             }
             .padding()
+        }
+    }
+
+    private var rightSidebar: some View {
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                commandPanel
+                    .frame(height: geometry.size.height / 3)
+
+                Divider()
+
+                TodoView()
+                    .frame(height: geometry.size.height * 2 / 3)
+            }
         }
     }
 
