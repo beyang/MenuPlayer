@@ -260,6 +260,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func showSpotlightInput() {
         let panel = spotlightPanel ?? makeSpotlightPanel()
         spotlightPanel = panel
+        panel.contentView = NSHostingView(rootView: makeSpotlightRootView())
 
         positionSpotlightPanel(panel)
         NSApp.activate(ignoringOtherApps: true)
@@ -285,8 +286,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
+        panel.contentView = NSHostingView(rootView: makeSpotlightRootView())
+        return panel
+    }
 
-        let rootView = SpotlightPanelContentView(
+    private func makeSpotlightRootView() -> some View {
+        SpotlightPanelContentView(
             commandSuggestions: { [commandRegistry] input in
                 commandRegistry.matchingCommands(for: input)
             },
@@ -300,9 +305,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self.spotlightPanel?.orderOut(nil)
             }
         )
-            .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
-        panel.contentView = NSHostingView(rootView: rootView)
-        return panel
+        .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
     }
 
     private func positionSpotlightPanel(_ panel: NSPanel) {
