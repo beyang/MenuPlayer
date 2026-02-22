@@ -9,7 +9,6 @@ import SwiftUI
 import AppKit
 import CoreData
 import Carbon.HIToolbox
-import UserNotifications
 
 final class SpotlightPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -235,7 +234,7 @@ final class CommandRegistry {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate {
     var hotKeyRef: EventHotKeyRef?
     private var spotlightPanel: SpotlightPanel?
     private let commandRegistry = CommandRegistry()
@@ -245,7 +244,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         NSApp.setActivationPolicy(.accessory)
         AppDelegate.shared = self
         registerCommands()
-        requestNotificationPermission()
         registerGlobalHotKey()
     }
 
@@ -349,16 +347,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func registerCommands() {
         commandRegistry.register(
             SpotlightCommand(
-                name: "show notification",
-                aliases: ["show notif", "notification", "this is a notif"],
-                action: { [weak self] in
-                    self?.showNotification(message: "this is a notif")
-                }
-            )
-        )
-
-        commandRegistry.register(
-            SpotlightCommand(
                 name: "new chrome window",
                 aliases: ["chrome", "open chrome", "create chrome window", "google chrome"],
                 action: { [weak self] in
@@ -366,45 +354,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 }
             )
         )
-    }
-
-    private func requestNotificationPermission() {
-        let center = UNUserNotificationCenter.current()
-        center.delegate = self
-        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error {
-                print("[Focus] Notification permission error: \(error)")
-                return
-            }
-            print("[Focus] Notification permission granted: \(granted)")
-        }
-    }
-
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        completionHandler([.banner, .sound, .list])
-    }
-
-    private func showNotification(message: String) {
-        let content = UNMutableNotificationContent()
-        content.title = "Focus"
-        content.body = message
-        content.sound = .default
-
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error {
-                print("[Focus] Failed to post notification: \(error)")
-            }
-        }
     }
 
     private func openGoogleChromeWindow() {
