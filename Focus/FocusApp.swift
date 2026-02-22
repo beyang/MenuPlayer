@@ -235,7 +235,7 @@ final class CommandRegistry {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var hotKeyRef: EventHotKeyRef?
     private var spotlightPanel: SpotlightPanel?
     private let commandRegistry = CommandRegistry()
@@ -370,6 +370,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func requestNotificationPermission() {
         let center = UNUserNotificationCenter.current()
+        center.delegate = self
         center.requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error {
                 print("[Focus] Notification permission error: \(error)")
@@ -377,6 +378,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             print("[Focus] Notification permission granted: \(granted)")
         }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound, .list])
     }
 
     private func showNotification(message: String) {
