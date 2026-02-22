@@ -399,31 +399,109 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func openGoogleChromeWindow() {
-        let scriptSource = """
-        tell application "Google Chrome"
-            activate
-            make new window
-        end tell
-        """
+        let trusted = AXIsProcessTrusted()
+        if !trusted {
+            let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
+            return
+        }
 
-        var scriptError: NSDictionary?
-        let script = NSAppleScript(source: scriptSource)
-        script?.executeAndReturnError(&scriptError)
+        let bundleID = "com.google.Chrome"
 
-        if let scriptError {
-            print("[Focus] Failed to create Chrome window via AppleScript: \(scriptError)")
+        // Find or launch Chrome
+        let chrome = NSWorkspace.shared.runningApplications.first { $0.bundleIdentifier == bundleID }
+        if chrome == nil {
+            NSWorkspace.shared.launchApplication("Google Chrome")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.selectChromeNewWindow()
+            }
+            return
+        }
 
-            let process = Process()
-            process.launchPath = "/usr/bin/open"
-            process.arguments = ["-a", "Google Chrome", "--args", "--new-window", "about:blank"]
+        chrome?.activate(options: .activateIgnoringOtherApps)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.selectChromeNewWindow()
+        }
+    }
 
-            do {
-                try process.run()
-            } catch {
-                print("[Focus] Failed to launch Google Chrome fallback: \(error)")
+    private func selectChromeNewWindow(retryCount: Int = 0) {
+        let bundleID = "com.google.Chrome"
+        guard let chrome = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) else {
+            NSSound.beep()
+            return
+        }
+
+        let pid = chrome.processIdentifier
+        let appElement = AXUIElementCreateApplication(pid)
+
+        // Get the menu bar
+        var menuBarRef: CFTypeRef?
+        let menuBarResult = AXUIElementCopyAttributeValue(appElement, kAXMenuBarAttribute as CFString, &menuBarRef)
+        guard menuBarResult == .success else {
+            if retryCount < 5 {
+                let delay = 0.3 * Double(retryCount + 1)
+                chrome.activate(options: .activateIgnoringOtherApps)
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.selectChromeNewWindow(retryCount: retryCount + 1)
+                }
+            } else {
                 NSSound.beep()
             }
+            return
         }
+
+        // Walk the menu path: File → New Window
+        let menuBar = menuBarRef as! AXUIElement
+        guard let menuItem = findMenuItemByPath(in: menuBar, path: ["File", "New Window"]) else {
+            NSSound.beep()
+            return
+        }
+
+        let result = AXUIElementPerformAction(menuItem, kAXPressAction as CFString)
+        if result != .success {
+            NSSound.beep()
+        }
+    }
+
+    private func findMenuItemByPath(in element: AXUIElement, path: [String]) -> AXUIElement? {
+        var current = element
+        for component in path {
+            guard let child = findAXChild(named: component, in: current) else {
+                return nil
+            }
+            current = child
+        }
+        return current
+    }
+
+    private func findAXChild(named name: String, in element: AXUIElement) -> AXUIElement? {
+        var count: CFIndex = 0
+        AXUIElementGetAttributeValueCount(element, kAXChildrenAttribute as CFString, &count)
+        guard count > 0 else { return nil }
+
+        var childrenRef: CFArray?
+        guard AXUIElementCopyAttributeValues(element, kAXChildrenAttribute as CFString, 0, count, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement] else {
+            return nil
+        }
+
+        for child in children {
+            var roleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(child, kAXRoleAttribute as CFString, &roleRef)
+            let role = (roleRef as? String) ?? ""
+
+            if role == (kAXMenuRole as String) {
+                if let found = findAXChild(named: name, in: child) { return found }
+                continue
+            }
+
+            var titleRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(child, kAXTitleAttribute as CFString, &titleRef)
+            if (titleRef as? String) == name {
+                return child
+            }
+        }
+        return nil
     }
 }
 
