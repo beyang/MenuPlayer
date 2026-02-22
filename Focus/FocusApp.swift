@@ -260,7 +260,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func showSpotlightInput() {
         let panel = spotlightPanel ?? makeSpotlightPanel()
         spotlightPanel = panel
-        panel.contentView = NSHostingView(rootView: makeSpotlightRootView())
 
         positionSpotlightPanel(panel)
         NSApp.activate(ignoringOtherApps: true)
