@@ -9,6 +9,11 @@ import SwiftUI
 import AppKit
 import CoreData
 import Carbon.HIToolbox
+import Combine
+
+extension Notification.Name {
+    static let spotlightPanelDidShow = Notification.Name("spotlightPanelDidShow")
+}
 
 final class SpotlightPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -201,6 +206,11 @@ struct SpotlightPanelContentView: View {
         .onAppear {
             commandFieldFocused = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .spotlightPanelDidShow)) { _ in
+            DispatchQueue.main.async {
+                commandFieldFocused = true
+            }
+        }
     }
 }
 
@@ -265,6 +275,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        NotificationCenter.default.post(name: .spotlightPanelDidShow, object: nil)
     }
 
     private func makeSpotlightPanel() -> SpotlightPanel {
