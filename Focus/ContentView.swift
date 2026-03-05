@@ -300,7 +300,7 @@ struct RemindersView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Text("notif <message> - Show notification")
+                Text("notif|notify <message> - Show notification")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
 
@@ -449,13 +449,14 @@ struct RemindersView: View {
             return
         }
 
-        if commandContent.hasPrefix("notif ") {
-            let message = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)
+        if commandContent.hasPrefix("notif ") || commandContent.hasPrefix("notify ") {
+            let messageStart = commandContent.hasPrefix("notify ") ? 7 : 6
+            let message = String(commandContent.dropFirst(messageStart)).trimmingCharacters(in: .whitespacesAndNewlines)
             if !message.isEmpty {
                 showNotification(title: message, message: "Triggered from Focus command panel")
                 commandInput = ""
             } else {
-                errorMessage = "notif command requires a message"
+                errorMessage = "notif/notify command requires a message"
             }
         } else if commandContent.hasPrefix("timer ") {
             let timerArgs = String(commandContent.dropFirst(6)).trimmingCharacters(in: .whitespacesAndNewlines)

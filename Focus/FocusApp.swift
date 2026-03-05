@@ -10,6 +10,7 @@ import AppKit
 import CoreData
 import Carbon.HIToolbox
 import Combine
+import UserNotifications
 
 extension Notification.Name {
     static let spotlightPanelDidShow = Notification.Name("spotlightPanelDidShow")
@@ -215,7 +216,7 @@ struct SpotlightPanelContentView: View {
 }
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var hotKeyRef: EventHotKeyRef?
     private var spotlightPanel: SpotlightPanel?
     private let commandRegistry = CommandRegistry()
@@ -224,8 +225,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         AppDelegate.shared = self
+        UNUserNotificationCenter.current().delegate = self
         registerCommands()
         registerGlobalHotKey()
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .list, .sound])
     }
 
     func applicationWillTerminate(_ notification: Notification) {
