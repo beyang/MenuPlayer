@@ -373,7 +373,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             return
         }
 
-        chrome?.activate(options: .activateIgnoringOtherApps)
+        // Do not activate Chrome before creating the window. Activating an app can make
+        // macOS switch to the Space containing its most recently used window; invoking
+        // the menu item through Accessibility keeps the current Space active instead.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.selectChromeNewWindow()
         }
@@ -394,7 +396,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         guard menuBarResult == .success else {
             if retryCount < 5 {
                 let delay = 0.3 * Double(retryCount + 1)
-                chrome.activate(options: .activateIgnoringOtherApps)
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                     self?.selectChromeNewWindow(retryCount: retryCount + 1)
                 }
